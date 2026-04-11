@@ -5,6 +5,7 @@ import TopBar from '../components/ui/TopBar'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useTrabajadoresStore } from '../store/trabajadoresStore'
 import { formatTime } from '../lib/utils'
+import { exportPdfTablaPorMaquina, exportPdfResumenEjecutivo } from '../lib/pdfExport'
 import type { UsoEquipo, Maquina } from '../types/database'
 import toast from 'react-hot-toast'
 
@@ -159,24 +160,85 @@ export default function Informes() {
     }
   }
 
+  // -----------------------------------------------------------------------------
+  // Exportación PDF — formato A (tabla por máquina) y B (resumen ejecutivo)
+  // -----------------------------------------------------------------------------
+  const exportarPdfDetallado = () => {
+    try {
+      const maquinasExport = filterMaquina === 'todas'
+        ? maquinasOrdenadas
+        : maquinasOrdenadas.filter((m) => m.id === filterMaquina)
+      const filename = exportPdfTablaPorMaquina({
+        maquinas: maquinasExport,
+        usos: usosFiltrados,
+        incidencias,
+        getName,
+        desde,
+        hasta,
+      })
+      toast.success(`Descargado ${filename}`, { icon: '📄' })
+    } catch (err) {
+      console.error('[exportarPdfDetallado] error:', err)
+      toast.error(err instanceof Error ? err.message : 'Error generando el PDF')
+    }
+  }
+
+  const exportarPdfResumen = () => {
+    try {
+      if (stats.total === 0) {
+        toast.error('No hay datos en el rango seleccionado')
+        return
+      }
+      const filename = exportPdfResumenEjecutivo({
+        maquinas: maquinasOrdenadas,
+        usos: usosFiltrados,
+        incidencias,
+        getName,
+        desde,
+        hasta,
+      })
+      toast.success(`Descargado ${filename}`, { icon: '📄' })
+    } catch (err) {
+      console.error('[exportarPdfResumen] error:', err)
+      toast.error('Error generando el PDF')
+    }
+  }
+
   return (
     <Layout>
       <TopBar
         title="Informes"
         subtitle="Exportación a Excel compatible con el formato original del cliente"
         actions={
-          <button
-            onClick={exportarExcel}
-            disabled={stats.total === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3" />
-              <polyline points="5,7 8,10 11,7" />
-              <line x1="8" y1="10" x2="8" y2="2" />
-            </svg>
-            Descargar Excel
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportarExcel}
+              disabled={stats.total === 0}
+              title="Formato Excel compatible con el histórico del cliente"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ExportIcon />
+              Excel
+            </button>
+            <button
+              onClick={exportarPdfDetallado}
+              disabled={stats.total === 0}
+              title="PDF detallado con tabla de usos por máquina"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold bg-surface-3 border border-border-default text-text-primary hover:bg-surface-4 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ExportIcon />
+              PDF detallado
+            </button>
+            <button
+              onClick={exportarPdfResumen}
+              disabled={stats.total === 0}
+              title="PDF resumen ejecutivo en una página"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold bg-surface-3 border border-border-default text-text-primary hover:bg-surface-4 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ExportIcon />
+              PDF resumen
+            </button>
+          </div>
         }
       />
 
@@ -289,6 +351,16 @@ export default function Informes() {
 // =============================================================================
 // Sub-componentes
 // =============================================================================
+
+function ExportIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3" />
+      <polyline points="5,7 8,10 11,7" />
+      <line x1="8" y1="10" x2="8" y2="2" />
+    </svg>
+  )
+}
 
 function StatBlock({ label, value, className }: { label: string; value: number; className?: string }) {
   return (

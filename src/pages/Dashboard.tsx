@@ -5,9 +5,11 @@ import MaquinaWorkCard from '../components/maquinas/MaquinaWorkCard'
 import CompletedWorkCard from '../components/maquinas/CompletedWorkCard'
 import EnVivoPanel from '../components/maquinas/EnVivoPanel'
 import { useWorkflowStore } from '../store/workflowStore'
+import { useAlertasRealtime } from '../hooks/useAlertasRealtime'
 import { toIsoDateTime } from '../lib/utils'
 
 export default function Dashboard() {
+  useAlertasRealtime()
   const { maquinas, usos, mantenimientos } = useWorkflowStore()
 
   const visibles = maquinas.filter((m) => m.activa)

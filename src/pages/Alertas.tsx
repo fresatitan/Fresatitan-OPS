@@ -3,6 +3,7 @@ import Layout from '../components/ui/Layout'
 import TopBar from '../components/ui/TopBar'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useTrabajadoresStore } from '../store/trabajadoresStore'
+import { useAlertasRealtime } from '../hooks/useAlertasRealtime'
 import { formatTime } from '../lib/utils'
 import type { UsoEquipo, Incidencia, Maquina } from '../types/database'
 
@@ -15,6 +16,7 @@ import type { UsoEquipo, Incidencia, Maquina } from '../types/database'
  *   2. Máquinas actualmente en estado 'avería' (estado_actual)
  */
 export default function Alertas() {
+  useAlertasRealtime()
   const maquinas = useWorkflowStore((s) => s.maquinas)
   const usos = useWorkflowStore((s) => s.usos)
   const incidencias = useWorkflowStore((s) => s.incidencias)
