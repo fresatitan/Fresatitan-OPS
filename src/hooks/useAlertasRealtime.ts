@@ -22,7 +22,12 @@ export function useAlertasRealtime() {
   const seenUsos = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return
+    if (!isSupabaseConfigured || !supabase) {
+      console.warn('[alertas-realtime] Supabase no configurado, skip')
+      return
+    }
+
+    console.log('[alertas-realtime] Montando hook y suscribiendo canal...')
 
     // Prime los IDs ya vistos al montar (para no disparar toasts por datos existentes)
     const currentUsos = useWorkflowStore.getState().usos
@@ -38,9 +43,12 @@ export function useAlertasRealtime() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'maquinas' },
         (payload) => {
+          console.log('[alertas-realtime] UPDATE maquinas recibido:', payload)
           const nuevo = payload.new as { id: string; codigo: string; nombre: string; estado_actual: string }
-          const viejo = payload.old as { estado_actual: string }
-          if (nuevo.estado_actual === 'avería' && viejo.estado_actual !== 'avería') {
+          const viejo = payload.old as { estado_actual?: string }
+          // Disparamos si el estado nuevo es avería (sin depender del antiguo — REPLICA IDENTITY puede no enviarlo)
+          if (nuevo.estado_actual === 'avería' && viejo?.estado_actual !== 'avería') {
+            console.log('[alertas-realtime] 🔔 Disparando toast avería para', nuevo.codigo)
             toast.error(
               `⚠ Avería reportada: ${nuevo.codigo} — ${nuevo.nombre}`,
               {
@@ -61,14 +69,15 @@ export function useAlertasRealtime() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'usos_equipo' },
         (payload) => {
+          console.log('[alertas-realtime] UPDATE usos_equipo recibido:', payload)
           const nuevo = payload.new as { id: string; maquina_id: string; resultado: string }
           if (nuevo.resultado === 'ko' && !seenUsos.current.has(nuevo.id)) {
             seenUsos.current.add(nuevo.id)
             const maquina = useWorkflowStore.getState().maquinas.find((m) => m.id === nuevo.maquina_id)
             const getName = useTrabajadoresStore.getState().getTrabajadorName
-            // Buscamos quién cerró — el tecnico_acabado_id del uso actualizado
             const usoCompleto = useWorkflowStore.getState().usos.find((u) => u.id === nuevo.id)
             const cerradoPor = usoCompleto?.tecnico_acabado_id ? getName(usoCompleto.tecnico_acabado_id) : ''
+            console.log('[alertas-realtime] 🔔 Disparando toast KO')
             toast(
               `⚠ ${maquina?.codigo ?? 'Máquina'} cerrada con incidencia${cerradoPor ? ' por ' + cerradoPor : ''}`,
               {
@@ -85,9 +94,18 @@ export function useAlertasRealtime() {
           }
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        console.log('[alertas-realtime] Estado del canal:', status, err ?? '')
+        if (status === 'SUBSCRIBED') {
+          console.log('[alertas-realtime] ✓ Suscrito correctamente a Realtime')
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('[alertas-realtime] ✗ Error al suscribir', err)
+        }
+      })
 
     return () => {
+      console.log('[alertas-realtime] Desmontando canal')
       supabase!.removeChannel(channel)
     }
   }, [])
