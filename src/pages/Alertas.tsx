@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import Layout from '../components/ui/Layout'
 import TopBar from '../components/ui/TopBar'
+import TrabajadorAvatar from '../components/ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useTrabajadoresStore } from '../store/trabajadoresStore'
 import { useAlertasRealtime } from '../hooks/useAlertasRealtime'
 import { formatTime } from '../lib/utils'
-import type { UsoEquipo, Incidencia, Maquina } from '../types/database'
+import type { UsoEquipo, Incidencia, Maquina, MaquinaEstado } from '../types/database'
 
 /**
  * Página de Alertas — agrupa todos los problemas reportados por los técnicos
@@ -20,7 +21,9 @@ export default function Alertas() {
   const maquinas = useWorkflowStore((s) => s.maquinas)
   const usos = useWorkflowStore((s) => s.usos)
   const incidencias = useWorkflowStore((s) => s.incidencias)
+  const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
+  const trabajadores = useTrabajadoresStore((s) => s.trabajadores)
 
   const maquinasAveria = useMemo(
     () => maquinas.filter((m) => m.estado_actual === 'avería' && m.activa),
@@ -64,9 +67,23 @@ export default function Alertas() {
             <EmptyState message="Ninguna máquina reporta avería. 🎉" />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {maquinasAveria.map((m) => (
-                <MaquinaAveriaCard key={m.id} maquina={m} />
-              ))}
+              {maquinasAveria.map((m) => {
+                const ultimoEvento = estadosHistorial.find(
+                  (e) => e.maquina_id === m.id && e.estado === 'avería'
+                )
+                const reportadoPor = ultimoEvento?.usuario_id
+                  ? trabajadores.find((t) => t.id === ultimoEvento.usuario_id) ?? null
+                  : null
+                return (
+                  <MaquinaAveriaCard
+                    key={m.id}
+                    maquina={m}
+                    ultimoEvento={ultimoEvento ?? null}
+                    reportadoPor={reportadoPor}
+                    getName={getName}
+                  />
+                )
+              })}
             </div>
           )}
         </section>
@@ -131,20 +148,71 @@ function EmptyState({ message }: { message: string }) {
   )
 }
 
-function MaquinaAveriaCard({ maquina }: { maquina: Maquina }) {
+function MaquinaAveriaCard({
+  maquina,
+  ultimoEvento,
+  reportadoPor,
+  getName,
+}: {
+  maquina: Maquina
+  ultimoEvento: MaquinaEstado | null
+  reportadoPor: { id: string; nombre: string; apellidos: string } | null
+  getName: (id: string | null) => string
+}) {
   const updateEstadoMaquina = useWorkflowStore((s) => s.updateEstadoMaquina)
+
+  const fechaReporte = ultimoEvento
+    ? new Date(ultimoEvento.timestamp).toLocaleString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null
+
   return (
     <div className="bg-averia/5 border-2 border-averia/30 rounded-lg p-4 animate-averia">
-      <div className="flex items-center justify-between mb-2">
+      {/* Cabecera */}
+      <div className="flex items-center justify-between mb-3">
         <span className="font-mono text-xs text-averia font-bold">{maquina.codigo}</span>
         <span className="text-[10px] font-mono uppercase tracking-widest text-averia bg-averia/15 px-2 py-0.5 rounded">
           AVERÍA
         </span>
       </div>
+
+      {/* Nombre */}
       <h4 className="text-base font-bold text-text-primary mb-1">{maquina.nombre}</h4>
       {maquina.ubicacion && (
         <p className="text-xs text-text-tertiary mb-3">{maquina.ubicacion}</p>
       )}
+
+      {/* Reportado por (si tenemos el evento en historial) */}
+      {reportadoPor && (
+        <div className="flex items-center gap-2 bg-surface-3/50 border border-border-subtle rounded px-3 py-2 mb-3">
+          <TrabajadorAvatar trabajador={reportadoPor} size="sm" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] text-text-tertiary uppercase tracking-wider">Reportado por</div>
+            <div className="text-sm font-semibold text-text-primary">{getName(reportadoPor.id)}</div>
+          </div>
+          {fechaReporte && (
+            <div className="text-[10px] font-mono text-text-tertiary text-right">
+              {fechaReporte}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Motivo */}
+      {ultimoEvento?.motivo && (
+        <div className="mb-3">
+          <div className="text-[10px] text-averia uppercase tracking-wider mb-1">Motivo reportado</div>
+          <p className="text-xs text-text-primary bg-averia-muted/20 border border-averia/20 rounded px-3 py-2 leading-relaxed">
+            ⚠ {ultimoEvento.motivo}
+          </p>
+        </div>
+      )}
+
+      {/* Acción */}
       <button
         onClick={() => {
           if (confirm(`¿Marcar ${maquina.codigo} como operativa? Esto la pondrá de nuevo como "disponible".`)) {

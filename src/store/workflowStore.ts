@@ -5,6 +5,7 @@ import type {
   UsoEquipo,
   Incidencia,
   Mantenimiento,
+  MaquinaEstado,
   EstadoMaquina,
   TipoMantenimiento,
   ResultadoUso,
@@ -97,6 +98,7 @@ interface WorkflowState {
   usos: UsoEquipo[]
   incidencias: Incidencia[]
   mantenimientos: Mantenimiento[]
+  estadosHistorial: MaquinaEstado[]
 
   loading: boolean
   error: string | null
@@ -126,6 +128,8 @@ interface WorkflowState {
   getMantenimientosByMaquina: (maquinaId: string) => Mantenimiento[]
   getUsoActivo: (maquinaId: string) => UsoEquipo | null
   getIncidenciasByUso: (usoId: string) => Incidencia[]
+  /** Último cambio de estado a 'avería' para una máquina actualmente en avería */
+  getUltimaAveriaRecord: (maquinaId: string) => MaquinaEstado | null
 }
 
 // -----------------------------------------------------------------------------
@@ -136,6 +140,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   usos: [],
   incidencias: [],
   mantenimientos: [],
+  estadosHistorial: [],
 
   loading: false,
   error: null,
@@ -155,6 +160,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         usos: [],
         incidencias: [],
         mantenimientos: [],
+        estadosHistorial: [],
         loading: false,
         initialized: true,
       })
@@ -162,23 +168,26 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
 
     try {
-      const [maquinasRes, usosRes, incidenciasRes, mantRes] = await Promise.all([
+      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes] = await Promise.all([
         supabase.from('maquinas').select('*').order('codigo'),
         supabase.from('usos_equipo').select('*').order('created_at', { ascending: false }),
         supabase.from('incidencias').select('*').order('created_at', { ascending: false }),
         supabase.from('mantenimientos').select('*').order('fecha', { ascending: false }),
+        supabase.from('maquina_estados').select('*').order('timestamp', { ascending: false }).limit(500),
       ])
 
       if (maquinasRes.error) throw maquinasRes.error
       if (usosRes.error) throw usosRes.error
       if (incidenciasRes.error) throw incidenciasRes.error
       if (mantRes.error) throw mantRes.error
+      if (estadosRes.error) throw estadosRes.error
 
       set({
         maquinas: (maquinasRes.data ?? []) as Maquina[],
         usos: (usosRes.data ?? []) as UsoEquipo[],
         incidencias: (incidenciasRes.data ?? []) as Incidencia[],
         mantenimientos: (mantRes.data ?? []) as Mantenimiento[],
+        estadosHistorial: (estadosRes.data ?? []) as MaquinaEstado[],
         loading: false,
         initialized: true,
       })
@@ -203,13 +212,21 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const channel = supabase
       .channel('workflow-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'maquinas' }, () => {
-        // Forzamos un refetch parcial de maquinas (es pequeño, 12 filas)
+        // Forzamos un refetch parcial de maquinas + su historial (para ver motivos de avería)
         supabase!
           .from('maquinas')
           .select('*')
           .order('codigo')
           .then(({ data }) => {
             if (data) set({ maquinas: data as Maquina[] })
+          })
+        supabase!
+          .from('maquina_estados')
+          .select('*')
+          .order('timestamp', { ascending: false })
+          .limit(500)
+          .then(({ data }) => {
+            if (data) set({ estadosHistorial: data as MaquinaEstado[] })
           })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'usos_equipo' }, () => {
@@ -535,4 +552,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   getUsoActivo: (maquinaId) =>
     get().usos.find((u) => u.maquina_id === maquinaId && u.resultado === 'pendiente') ?? null,
   getIncidenciasByUso: (usoId) => get().incidencias.filter((i) => i.uso_id === usoId),
+
+  getUltimaAveriaRecord: (maquinaId) => {
+    // El historial ya viene ordenado desc por timestamp — busca el primer evento
+    // 'avería' de esta máquina (que es el más reciente por el order)
+    const history = get().estadosHistorial.filter((e) => e.maquina_id === maquinaId)
+    return history.find((e) => e.estado === 'avería') ?? null
+  },
 }))
