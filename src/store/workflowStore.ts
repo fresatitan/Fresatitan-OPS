@@ -495,8 +495,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   reportarAveria: async (maquinaId, motivo, usuarioId) => {
+    console.log('[reportarAveria] Llamado con:', { maquinaId, motivo, usuarioId })
     // Paso 1: cambiar estado de la máquina a 'avería'
     if (!isSupabaseConfigured || !supabase) {
+      console.warn('[reportarAveria] Supabase no configurado, usando in-memory')
       set((s) => ({
         maquinas: s.maquinas.map((m) =>
           m.id === maquinaId ? { ...m, estado_actual: 'avería' as EstadoMaquina } : m
@@ -504,16 +506,27 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       }))
       return
     }
-    const { error: estadoErr } = await supabase
+    console.log('[reportarAveria] Ejecutando UPDATE maquinas...')
+    const { data: updateData, error: estadoErr, status, statusText } = await supabase
       .from('maquinas')
       .update({ estado_actual: 'avería' })
       .eq('id', maquinaId)
+      .select()
+    console.log('[reportarAveria] UPDATE resultado:', { updateData, estadoErr, status, statusText })
     if (estadoErr) {
-      console.error('[reportarAveria] estado error:', estadoErr)
+      console.error('[reportarAveria] ✗ estado error:', estadoErr)
       set({ error: estadoErr.message })
       return
     }
+    if (!updateData || updateData.length === 0) {
+      console.error('[reportarAveria] ✗ UPDATE no afectó ninguna fila — ¿maquina_id correcto?')
+      set({ error: 'No se encontró la máquina a actualizar' })
+      return
+    }
+    console.log('[reportarAveria] ✓ UPDATE ok, filas afectadas:', updateData.length)
+
     // Paso 2: registrar en el historial con motivo
+    console.log('[reportarAveria] Ejecutando INSERT maquina_estados...')
     const { error: histErr } = await supabase
       .from('maquina_estados')
       .insert({
@@ -524,6 +537,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       })
     if (histErr) {
       console.error('[reportarAveria] historial error:', histErr)
+    } else {
+      console.log('[reportarAveria] ✓ historial registrado')
     }
     // El Realtime refetcheará maquinas automáticamente
   },
