@@ -484,6 +484,16 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       }))
       return
     }
+    // Caso especial: marcar avería como resuelta → RPC (funciona también para anon)
+    if (estado === 'parada') {
+      const { error } = await supabase.rpc('resolve_maquina_averia', { p_maquina_id: maquinaId })
+      if (error) {
+        console.error('[updateEstadoMaquina] resolve error:', error)
+        set({ error: error.message })
+      }
+      return
+    }
+    // Resto de cambios de estado (solo admin autenticado)
     const { error } = await supabase
       .from('maquinas')
       .update({ estado_actual: estado })
@@ -495,10 +505,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   reportarAveria: async (maquinaId, motivo, usuarioId) => {
-    console.log('[reportarAveria] Llamado con:', { maquinaId, motivo, usuarioId })
-    // Paso 1: cambiar estado de la máquina a 'avería'
     if (!isSupabaseConfigured || !supabase) {
-      console.warn('[reportarAveria] Supabase no configurado, usando in-memory')
       set((s) => ({
         maquinas: s.maquinas.map((m) =>
           m.id === maquinaId ? { ...m, estado_actual: 'avería' as EstadoMaquina } : m
@@ -506,41 +513,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       }))
       return
     }
-    console.log('[reportarAveria] Ejecutando UPDATE maquinas...')
-    const { data: updateData, error: estadoErr, status, statusText } = await supabase
-      .from('maquinas')
-      .update({ estado_actual: 'avería' })
-      .eq('id', maquinaId)
-      .select()
-    console.log('[reportarAveria] UPDATE resultado:', { updateData, estadoErr, status, statusText })
-    if (estadoErr) {
-      console.error('[reportarAveria] ✗ estado error:', estadoErr)
-      set({ error: estadoErr.message })
-      return
+    // Llamamos a la función RPC SECURITY DEFINER que encapsula el UPDATE +
+    // el INSERT en maquina_estados. Ver supabase/migrations/0005_rpc_report_averia.sql
+    const { error } = await supabase.rpc('report_maquina_averia', {
+      p_maquina_id: maquinaId,
+      p_motivo: motivo,
+      p_usuario_id: usuarioId ?? null,
+    })
+    if (error) {
+      console.error('[reportarAveria] error:', error)
+      set({ error: error.message })
     }
-    if (!updateData || updateData.length === 0) {
-      console.error('[reportarAveria] ✗ UPDATE no afectó ninguna fila — ¿maquina_id correcto?')
-      set({ error: 'No se encontró la máquina a actualizar' })
-      return
-    }
-    console.log('[reportarAveria] ✓ UPDATE ok, filas afectadas:', updateData.length)
-
-    // Paso 2: registrar en el historial con motivo
-    console.log('[reportarAveria] Ejecutando INSERT maquina_estados...')
-    const { error: histErr } = await supabase
-      .from('maquina_estados')
-      .insert({
-        maquina_id: maquinaId,
-        estado: 'avería',
-        motivo,
-        usuario_id: usuarioId ?? null,
-      })
-    if (histErr) {
-      console.error('[reportarAveria] historial error:', histErr)
-    } else {
-      console.log('[reportarAveria] ✓ historial registrado')
-    }
-    // El Realtime refetcheará maquinas automáticamente
+    // El Realtime propagará automáticamente el cambio a los dashboards admin
   },
 
   // ---------------------------------------------------------------------------
