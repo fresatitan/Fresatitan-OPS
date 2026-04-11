@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast'
 import Dashboard from './pages/Dashboard'
 import Maquinas from './pages/Maquinas'
 import Trabajadores from './pages/Trabajadores'
+import Alertas from './pages/Alertas'
+import Informes from './pages/Informes'
 import Panel from './pages/Panel'
 import Login from './pages/Login'
 import RequireAuth from './components/auth/RequireAuth'
@@ -50,6 +52,8 @@ export default function App() {
         <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/maquinas" element={<RequireAuth><Maquinas /></RequireAuth>} />
         <Route path="/trabajadores" element={<RequireAuth><Trabajadores /></RequireAuth>} />
+        <Route path="/alertas" element={<RequireAuth><Alertas /></RequireAuth>} />
+        <Route path="/informes" element={<RequireAuth><Informes /></RequireAuth>} />
 
         {/* Catch-all */}
         <Route path="*" element={<CatchAllRedirect />} />

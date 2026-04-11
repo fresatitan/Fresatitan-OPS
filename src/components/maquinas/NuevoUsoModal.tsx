@@ -18,7 +18,7 @@ const nowTime = () => {
 }
 const todayDate = () => new Date().toISOString().slice(0, 10)
 
-type Step = 'preparacion' | 'lanzamiento' | 'confirmar'
+type Step = 'preparacion' | 'lanzamiento' | 'confirmar' | 'averia'
 
 /**
  * Flujo rediseñado para trabajadores no-técnicos:
@@ -31,6 +31,7 @@ type Step = 'preparacion' | 'lanzamiento' | 'confirmar'
  */
 export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   const iniciarUso = useWorkflowStore((s) => s.iniciarUso)
+  const reportarAveria = useWorkflowStore((s) => s.reportarAveria)
   const trabajadores = useTrabajadoresStore((s) => s.trabajadores)
   const candidatos = trabajadores.filter((t) => t.activo && t.puede_operar)
 
@@ -41,6 +42,8 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   const [fecha, setFecha] = useState(todayDate())
   const [hora, setHora] = useState(nowTime())
   const [observaciones, setObservaciones] = useState('')
+  const [averiaMotivo, setAveriaMotivo] = useState('')
+  const [averiaTecnico, setAveriaTecnico] = useState<Trabajador | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -51,8 +54,17 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
       setFecha(todayDate())
       setHora(nowTime())
       setObservaciones('')
+      setAveriaMotivo('')
+      setAveriaTecnico(null)
     }
   }, [open])
+
+  const handleReportarAveria = async () => {
+    if (!averiaMotivo.trim()) return
+    await reportarAveria(maquina.id, averiaMotivo.trim(), averiaTecnico?.id ?? null)
+    toast.error(`${maquina.codigo} marcada como avería`, { icon: '⚠' })
+    onClose()
+  }
 
   // Avanzar automáticamente cuando se elige técnico
   const handleSelectPrep = (t: Trabajador) => {
@@ -103,11 +115,65 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   return (
     <Modal open={open} onClose={onClose} title={`${maquina.codigo} · ${maquina.nombre}`} size="lg">
       <div className="min-h-[360px]">
-        {/* Progreso en pasos */}
-        <StepIndicator
-          current={step}
-          requiereLanzamiento={maquina.requiere_lanzamiento}
-        />
+        {/* Link escape: reportar avería en cualquier momento (salvo si ya estás en averia) */}
+        {step !== 'averia' && (
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => setStep('averia')}
+              className="text-[11px] text-averia hover:text-averia/80 transition-colors flex items-center gap-1"
+            >
+              <span>⚠</span>
+              <span className="underline decoration-dotted">Reportar avería en esta máquina</span>
+            </button>
+          </div>
+        )}
+
+        {/* Progreso en pasos (solo en flujo de uso normal) */}
+        {step !== 'averia' && (
+          <StepIndicator
+            current={step as 'preparacion' | 'lanzamiento' | 'confirmar'}
+            requiereLanzamiento={maquina.requiere_lanzamiento}
+          />
+        )}
+
+        {/* Modo Avería */}
+        {step === 'averia' && (
+          <StepContent
+            title="⚠ Reportar avería"
+            subtitle="Describe brevemente qué problema tiene la máquina. Esto la marcará como fuera de servicio hasta que el admin la resuelva."
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">¿Quién reporta?</label>
+                <TrabajadorGrid candidatos={candidatos} selected={averiaTecnico?.id ?? null} onSelect={setAveriaTecnico} />
+              </div>
+              <div>
+                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">¿Qué ha pasado?</label>
+                <textarea
+                  value={averiaMotivo}
+                  onChange={(e) => setAveriaMotivo(e.target.value)}
+                  rows={4}
+                  placeholder="Ejemplo: la máquina se ha parado a mitad del trabajo. Sale un código de error en pantalla."
+                  className="input-field resize-none text-base"
+                  autoFocus
+                />
+              </div>
+              <button
+                onClick={handleReportarAveria}
+                disabled={!averiaMotivo.trim() || !averiaTecnico}
+                className="w-full py-5 rounded-xl text-lg font-bold bg-averia text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-averia/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Marcar máquina como averiada
+              </button>
+              <button
+                onClick={() => setStep('preparacion')}
+                className="w-full text-center text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+              >
+                Volver al uso normal
+              </button>
+            </div>
+          </StepContent>
+        )}
 
         {/* Paso 1: ¿Quién prepara? */}
         {step === 'preparacion' && (
@@ -197,7 +263,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
         )}
 
         {/* Navegación inferior */}
-        {step !== 'preparacion' && (
+        {step !== 'preparacion' && step !== 'averia' && (
           <div className="mt-5 pt-4 border-t border-border-subtle flex items-center justify-between">
             <button
               onClick={handleBack}
@@ -222,8 +288,10 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
 // Sub-componentes
 // =============================================================================
 
-function StepIndicator({ current, requiereLanzamiento }: { current: Step; requiereLanzamiento: boolean }) {
-  const steps: Step[] = requiereLanzamiento
+type FlowStep = 'preparacion' | 'lanzamiento' | 'confirmar'
+
+function StepIndicator({ current, requiereLanzamiento }: { current: FlowStep; requiereLanzamiento: boolean }) {
+  const steps: FlowStep[] = requiereLanzamiento
     ? ['preparacion', 'lanzamiento', 'confirmar']
     : ['preparacion', 'confirmar']
   const currentIdx = steps.indexOf(current)

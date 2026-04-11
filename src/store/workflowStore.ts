@@ -119,6 +119,7 @@ interface WorkflowState {
   updateMaquina: (id: string, data: Partial<Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion' | 'activa'>>) => Promise<void>
   removeMaquina: (id: string) => Promise<void>
   updateEstadoMaquina: (maquinaId: string, estado: EstadoMaquina) => Promise<void>
+  reportarAveria: (maquinaId: string, motivo: string, usuarioId?: string | null) => Promise<void>
 
   // Selectors
   getUsosByMaquina: (maquinaId: string) => UsoEquipo[]
@@ -491,6 +492,40 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       console.error('[updateEstadoMaquina] error:', error)
       set({ error: error.message })
     }
+  },
+
+  reportarAveria: async (maquinaId, motivo, usuarioId) => {
+    // Paso 1: cambiar estado de la máquina a 'avería'
+    if (!isSupabaseConfigured || !supabase) {
+      set((s) => ({
+        maquinas: s.maquinas.map((m) =>
+          m.id === maquinaId ? { ...m, estado_actual: 'avería' as EstadoMaquina } : m
+        ),
+      }))
+      return
+    }
+    const { error: estadoErr } = await supabase
+      .from('maquinas')
+      .update({ estado_actual: 'avería' })
+      .eq('id', maquinaId)
+    if (estadoErr) {
+      console.error('[reportarAveria] estado error:', estadoErr)
+      set({ error: estadoErr.message })
+      return
+    }
+    // Paso 2: registrar en el historial con motivo
+    const { error: histErr } = await supabase
+      .from('maquina_estados')
+      .insert({
+        maquina_id: maquinaId,
+        estado: 'avería',
+        motivo,
+        usuario_id: usuarioId ?? null,
+      })
+    if (histErr) {
+      console.error('[reportarAveria] historial error:', histErr)
+    }
+    // El Realtime refetcheará maquinas automáticamente
   },
 
   // ---------------------------------------------------------------------------

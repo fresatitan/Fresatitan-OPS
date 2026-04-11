@@ -1,0 +1,335 @@
+import { useState, useMemo } from 'react'
+import * as XLSX from 'xlsx'
+import Layout from '../components/ui/Layout'
+import TopBar from '../components/ui/TopBar'
+import { useWorkflowStore } from '../store/workflowStore'
+import { useTrabajadoresStore } from '../store/trabajadoresStore'
+import { formatTime } from '../lib/utils'
+import type { UsoEquipo, Maquina } from '../types/database'
+import toast from 'react-hot-toast'
+
+/**
+ * Página de Informes — exportación a Excel replicando el formato del cliente.
+ *
+ * Formato original del cliente (una hoja por máquina):
+ *   Data | Hora preparació | Tècnic preparació | [Punxat (Tècnic)] | Hora acabat | Tècnic acabat | Resultat | ... (repetido hasta 3-5 veces) | TOTAL US
+ *
+ * Las máquinas con `requiere_lanzamiento=true` llevan la columna "Punxat (Tècnic)".
+ * Las filas se agrupan por fecha y por máquina. Múltiples usos del mismo día
+ * aparecen en bloques consecutivos de columnas (hasta el máximo de usos del día
+ * entre todas las fechas).
+ */
+export default function Informes() {
+  const maquinas = useWorkflowStore((s) => s.maquinas)
+  const usos = useWorkflowStore((s) => s.usos)
+  const incidencias = useWorkflowStore((s) => s.incidencias)
+  const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
+
+  const [filterMaquina, setFilterMaquina] = useState<string>('todas')
+  const [desde, setDesde] = useState<string>(() => {
+    const d = new Date()
+    d.setDate(1) // inicio del mes
+    return d.toISOString().slice(0, 10)
+  })
+  const [hasta, setHasta] = useState<string>(() => new Date().toISOString().slice(0, 10))
+
+  const maquinasOrdenadas = useMemo(
+    () => [...maquinas].sort((a, b) => a.codigo.localeCompare(b.codigo)),
+    [maquinas]
+  )
+
+  // Usos filtrados por rango de fechas y máquina
+  const usosFiltrados = useMemo(() => {
+    return usos.filter((u) => {
+      if (u.fecha < desde || u.fecha > hasta) return false
+      if (filterMaquina !== 'todas' && u.maquina_id !== filterMaquina) return false
+      return true
+    })
+  }, [usos, desde, hasta, filterMaquina])
+
+  // KPIs del rango
+  const stats = useMemo(() => {
+    const total = usosFiltrados.length
+    const ok = usosFiltrados.filter((u) => u.resultado === 'ok').length
+    const ko = usosFiltrados.filter((u) => u.resultado === 'ko').length
+    const pendiente = usosFiltrados.filter((u) => u.resultado === 'pendiente').length
+    const inc = incidencias.filter((i) => usosFiltrados.some((u) => u.id === i.uso_id)).length
+    return { total, ok, ko, pendiente, inc }
+  }, [usosFiltrados, incidencias])
+
+  // -----------------------------------------------------------------------------
+  // Exportación Excel — formato FRESATITAN (compatible con los CSV originales)
+  // -----------------------------------------------------------------------------
+  const exportarExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new()
+      const maquinasExport = filterMaquina === 'todas'
+        ? maquinasOrdenadas
+        : maquinasOrdenadas.filter((m) => m.id === filterMaquina)
+
+      for (const maquina of maquinasExport) {
+        const usosDeMaquina = usosFiltrados
+          .filter((u) => u.maquina_id === maquina.id)
+          .sort((a, b) => (a.fecha + a.hora_preparacion).localeCompare(b.fecha + b.hora_preparacion))
+
+        if (usosDeMaquina.length === 0) continue
+
+        // Agrupar por fecha
+        const porFecha = new Map<string, UsoEquipo[]>()
+        for (const u of usosDeMaquina) {
+          if (!porFecha.has(u.fecha)) porFecha.set(u.fecha, [])
+          porFecha.get(u.fecha)!.push(u)
+        }
+
+        // Máximo de usos en un mismo día
+        const maxUsos = Math.max(...Array.from(porFecha.values()).map((a) => a.length))
+
+        // Construir cabecera del Excel como en los CSV originales del cliente
+        const columnasPorUso = maquina.requiere_lanzamiento
+          ? ['Hora preparació', 'Tècnic preparació', 'Punxat (Tècnic)', 'Hora acabat', 'Tècnic acabat', 'Resultat']
+          : ['Hora preparació', 'Tècnic preparació', 'Hora acabat', 'Tècnic acabat', 'Resultat']
+
+        const header: string[] = ['Data']
+        for (let i = 0; i < maxUsos; i++) header.push(...columnasPorUso)
+        header.push('Incidències', 'Total usos', 'Observacions')
+
+        const rows: (string | number)[][] = [header]
+
+        // Título de la máquina en la primera fila (merged conceptualmente)
+        const tituloFila: string[] = [
+          `FRESATITAN · EQUIP: ${maquina.codigo} · ${maquina.nombre}${maquina.numero_serie ? ' · ' + maquina.numero_serie : ''}`,
+        ]
+        rows.unshift(tituloFila)
+        rows.unshift([]) // fila en blanco
+
+        for (const [fecha, usosDelDia] of porFecha) {
+          const row: (string | number)[] = [fecha]
+          for (let i = 0; i < maxUsos; i++) {
+            const u = usosDelDia[i]
+            if (!u) {
+              // relleno vacío
+              for (let c = 0; c < columnasPorUso.length; c++) row.push('')
+              continue
+            }
+            row.push(formatTime(u.hora_preparacion))
+            row.push(getName(u.tecnico_preparacion_id))
+            if (maquina.requiere_lanzamiento) {
+              row.push(getName(u.tecnico_lanzamiento_id))
+            }
+            row.push(u.hora_acabado ? formatTime(u.hora_acabado) : '')
+            row.push(u.tecnico_acabado_id ? getName(u.tecnico_acabado_id) : '')
+            row.push(u.resultado === 'pendiente' ? '' : u.resultado.toUpperCase())
+          }
+          const incidenciasDelDia = usosDelDia.flatMap((u) =>
+            incidencias.filter((i) => i.uso_id === u.id).map((i) => i.descripcion)
+          )
+          row.push(incidenciasDelDia.join(' | '))
+          row.push(usosDelDia.length)
+          row.push(usosDelDia.map((u) => u.observaciones).filter(Boolean).join(' | '))
+          rows.push(row)
+        }
+
+        // Totales
+        rows.push([])
+        rows.push([
+          'TOTAL',
+          ...Array(maxUsos * columnasPorUso.length).fill(''),
+          incidencias.filter((i) => usosDeMaquina.some((u) => u.id === i.uso_id)).length,
+          usosDeMaquina.length,
+          '',
+        ])
+
+        const ws = XLSX.utils.aoa_to_sheet(rows)
+        // Ajustar anchos de columna aproximados
+        ws['!cols'] = header.map(() => ({ wch: 15 }))
+        XLSX.utils.book_append_sheet(wb, ws, maquina.codigo)
+      }
+
+      if (wb.SheetNames.length === 0) {
+        toast.error('No hay datos en el rango seleccionado')
+        return
+      }
+
+      const filename = `FRESATITAN_usos_${desde}_${hasta}.xlsx`
+      XLSX.writeFile(wb, filename)
+      toast.success(`Descargado ${filename}`, { icon: '📊' })
+    } catch (err) {
+      console.error('[exportarExcel] error:', err)
+      toast.error('Error generando el Excel')
+    }
+  }
+
+  return (
+    <Layout>
+      <TopBar
+        title="Informes"
+        subtitle="Exportación a Excel compatible con el formato original del cliente"
+        actions={
+          <button
+            onClick={exportarExcel}
+            disabled={stats.total === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3" />
+              <polyline points="5,7 8,10 11,7" />
+              <line x1="8" y1="10" x2="8" y2="2" />
+            </svg>
+            Descargar Excel
+          </button>
+        }
+      />
+
+      <main className="p-4 lg:p-6 space-y-6">
+        {/* Filtros */}
+        <section className="bg-surface-2 border border-border-subtle rounded-lg p-4">
+          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-text-tertiary mb-3">Filtros</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Desde</label>
+              <input
+                type="date"
+                value={desde}
+                onChange={(e) => setDesde(e.target.value)}
+                max={hasta}
+                className="input-field font-mono text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Hasta</label>
+              <input
+                type="date"
+                value={hasta}
+                onChange={(e) => setHasta(e.target.value)}
+                min={desde}
+                className="input-field font-mono text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Máquina</label>
+              <select
+                value={filterMaquina}
+                onChange={(e) => setFilterMaquina(e.target.value)}
+                className="input-field text-sm"
+              >
+                <option value="todas">Todas ({maquinasOrdenadas.length})</option>
+                {maquinasOrdenadas.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.codigo} · {m.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+
+        {/* KPIs del rango */}
+        <section className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <StatBlock label="Total usos" value={stats.total} />
+          <StatBlock label="Correctos" value={stats.ok} className="text-activa" />
+          <StatBlock label="Con KO" value={stats.ko} className="text-averia" />
+          <StatBlock label="En curso" value={stats.pendiente} className="text-parada" />
+          <StatBlock label="Incidencias" value={stats.inc} className="text-averia" />
+        </section>
+
+        {/* Tabla preview */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-widest text-text-tertiary">
+              Vista previa · {stats.total} registros
+            </h3>
+            <div className="flex-1 h-px bg-border-subtle" />
+          </div>
+
+          {usosFiltrados.length === 0 ? (
+            <div className="bg-surface-2 rounded-lg border border-border-subtle p-8 text-center">
+              <p className="text-sm text-text-tertiary">Sin datos en el rango seleccionado.</p>
+              <p className="text-[11px] text-text-tertiary mt-1">Ajusta las fechas o elige otra máquina.</p>
+            </div>
+          ) : (
+            <div className="bg-surface-2 rounded-lg border border-border-subtle overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="bg-surface-3/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-tertiary">
+                      <th className="px-3 py-2 text-left">Máquina</th>
+                      <th className="px-3 py-2 text-left">Fecha</th>
+                      <th className="px-3 py-2 text-left">Prep.</th>
+                      <th className="px-3 py-2 text-left">Técnico prep.</th>
+                      <th className="px-3 py-2 text-left">Lanz.</th>
+                      <th className="px-3 py-2 text-left">Acabado</th>
+                      <th className="px-3 py-2 text-left">Técnico acab.</th>
+                      <th className="px-3 py-2 text-center">Resultado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usosFiltrados
+                      .sort((a, b) => (b.fecha + b.hora_preparacion).localeCompare(a.fecha + a.hora_preparacion))
+                      .slice(0, 50)
+                      .map((u) => {
+                        const m = maquinasOrdenadas.find((mm) => mm.id === u.maquina_id)
+                        return <UsoRow key={u.id} uso={u} maquina={m} getName={getName} />
+                      })}
+                  </tbody>
+                </table>
+              </div>
+              {usosFiltrados.length > 50 && (
+                <div className="px-3 py-2 border-t border-border-subtle bg-surface-3/30 text-[10px] text-text-tertiary text-center">
+                  Mostrando 50 de {usosFiltrados.length} · descarga el Excel para ver todos
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      </main>
+    </Layout>
+  )
+}
+
+// =============================================================================
+// Sub-componentes
+// =============================================================================
+
+function StatBlock({ label, value, className }: { label: string; value: number; className?: string }) {
+  return (
+    <div className="bg-surface-2 border border-border-subtle rounded-lg p-3">
+      <div className="text-[10px] uppercase tracking-widest text-text-tertiary">{label}</div>
+      <div className={`text-metric text-2xl mt-1 ${className ?? 'text-text-primary'}`}>{value}</div>
+    </div>
+  )
+}
+
+function UsoRow({
+  uso,
+  maquina,
+  getName,
+}: {
+  uso: UsoEquipo
+  maquina: Maquina | undefined
+  getName: (id: string | null) => string
+}) {
+  return (
+    <tr className="border-b border-border-subtle last:border-b-0 hover:bg-surface-3/40 transition-colors">
+      <td className="px-3 py-2 font-mono text-[10px] text-primary">{maquina?.codigo ?? '—'}</td>
+      <td className="px-3 py-2 font-mono text-text-secondary">{uso.fecha}</td>
+      <td className="px-3 py-2 font-mono text-text-secondary">{formatTime(uso.hora_preparacion)}</td>
+      <td className="px-3 py-2 text-text-primary">{getName(uso.tecnico_preparacion_id)}</td>
+      <td className="px-3 py-2 text-text-tertiary">
+        {maquina?.requiere_lanzamiento ? getName(uso.tecnico_lanzamiento_id) : '—'}
+      </td>
+      <td className="px-3 py-2 font-mono text-text-secondary">{formatTime(uso.hora_acabado)}</td>
+      <td className="px-3 py-2 text-text-primary">{uso.tecnico_acabado_id ? getName(uso.tecnico_acabado_id) : '—'}</td>
+      <td className="px-3 py-2 text-center">
+        {uso.resultado === 'ok' && (
+          <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold font-mono bg-activa-muted text-activa">OK</span>
+        )}
+        {uso.resultado === 'ko' && (
+          <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold font-mono bg-averia-muted text-averia">KO</span>
+        )}
+        {uso.resultado === 'pendiente' && (
+          <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold font-mono bg-parada-muted text-parada">EN CURSO</span>
+        )}
+      </td>
+    </tr>
+  )
+}
