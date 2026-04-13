@@ -5,6 +5,8 @@ import { useElapsedTime } from '../hooks/useElapsedTime'
 import { toIsoDateTime } from '../lib/utils'
 import NuevoUsoModal from '../components/maquinas/NuevoUsoModal'
 import CerrarUsoModal from '../components/maquinas/CerrarUsoModal'
+import SeleccionTipoTrabajoModal from '../components/panel/SeleccionTipoTrabajoModal'
+import StartMantenimientoModal from '../components/panel/StartMantenimientoModal'
 import type { Maquina, UsoEquipo } from '../types/database'
 
 /**
@@ -23,8 +25,12 @@ export default function Panel() {
   const maquinas = useWorkflowStore((s) => s.maquinas)
   const usos = useWorkflowStore((s) => s.usos)
 
+  const [selectorFor, setSelectorFor] = useState<Maquina | null>(null)
   const [nuevoFor, setNuevoFor] = useState<Maquina | null>(null)
+  const [mantFor, setMantFor] = useState<Maquina | null>(null)
   const [cerrarFor, setCerrarFor] = useState<{ maquina: Maquina; uso: UsoEquipo } | null>(null)
+  // When user picks "Reportar avería" from the selector, open NuevoUsoModal in avería mode
+  const [averiaFor, setAveriaFor] = useState<Maquina | null>(null)
 
   // Solo máquinas operativas (Lilian queda fuera del panel)
   const visibles = maquinas.filter((m) => m.activa)
@@ -34,11 +40,29 @@ export default function Panel() {
 
   const handleMachineTap = (m: Maquina) => {
     if (m.estado_actual === 'parada') {
-      setNuevoFor(m)
+      setSelectorFor(m)
     } else if (m.estado_actual === 'activa') {
       const uso = getUso(m.id)
       if (uso) setCerrarFor({ maquina: m, uso })
     }
+  }
+
+  const handleSelectProduccion = () => {
+    const m = selectorFor
+    setSelectorFor(null)
+    if (m) setNuevoFor(m)
+  }
+
+  const handleSelectMantenimiento = () => {
+    const m = selectorFor
+    setSelectorFor(null)
+    if (m) setMantFor(m)
+  }
+
+  const handleSelectAveria = () => {
+    const m = selectorFor
+    setSelectorFor(null)
+    if (m) setAveriaFor(m)
   }
 
   return (
@@ -85,8 +109,24 @@ export default function Panel() {
       </main>
 
       {/* Modales */}
+      {selectorFor && (
+        <SeleccionTipoTrabajoModal
+          open={!!selectorFor}
+          onClose={() => setSelectorFor(null)}
+          maquina={selectorFor}
+          onSelectProduccion={handleSelectProduccion}
+          onSelectMantenimiento={handleSelectMantenimiento}
+          onSelectAveria={handleSelectAveria}
+        />
+      )}
       {nuevoFor && (
         <NuevoUsoModal open={!!nuevoFor} onClose={() => setNuevoFor(null)} maquina={nuevoFor} />
+      )}
+      {averiaFor && (
+        <NuevoUsoModal open={!!averiaFor} onClose={() => setAveriaFor(null)} maquina={averiaFor} />
+      )}
+      {mantFor && (
+        <StartMantenimientoModal open={!!mantFor} onClose={() => setMantFor(null)} maquina={mantFor} />
       )}
       {cerrarFor && (
         <CerrarUsoModal

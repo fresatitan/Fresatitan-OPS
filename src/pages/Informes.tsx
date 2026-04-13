@@ -10,20 +10,21 @@ import type { UsoEquipo, Maquina } from '../types/database'
 import toast from 'react-hot-toast'
 
 /**
- * Página de Informes — exportación a Excel replicando el formato del cliente.
+ * Página de Informes — exportación a Excel y PDF por máquina.
  *
  * Formato original del cliente (una hoja por máquina):
  *   Data | Hora preparació | Tècnic preparació | [Punxat (Tècnic)] | Hora acabat | Tècnic acabat | Resultat | ... (repetido hasta 3-5 veces) | TOTAL US
  *
  * Las máquinas con `requiere_lanzamiento=true` llevan la columna "Punxat (Tècnic)".
- * Las filas se agrupan por fecha y por máquina. Múltiples usos del mismo día
- * aparecen en bloques consecutivos de columnas (hasta el máximo de usos del día
- * entre todas las fechas).
+ * Las sinterizadoras (`requiere_preparacion=true`) llevan columnas de preparación.
+ * Las fresadoras (`requiere_preparacion=false`) omiten columnas de preparación.
+ * Las filas se agrupan por fecha y por máquina.
  */
 export default function Informes() {
   const maquinas = useWorkflowStore((s) => s.maquinas)
   const usos = useWorkflowStore((s) => s.usos)
   const incidencias = useWorkflowStore((s) => s.incidencias)
+  const mantenimientos = useWorkflowStore((s) => s.mantenimientos)
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
 
   const [filterMaquina, setFilterMaquina] = useState<string>('todas')
@@ -39,6 +40,22 @@ export default function Informes() {
     [maquinas]
   )
 
+  // Group machines by type for the selector
+  const fresadoras = useMemo(
+    () => maquinasOrdenadas.filter((m) => m.tipo === 'fresadora'),
+    [maquinasOrdenadas]
+  )
+  const sinterizadoras = useMemo(
+    () => maquinasOrdenadas.filter((m) => m.tipo === 'sinterizadora'),
+    [maquinasOrdenadas]
+  )
+
+  // Selected machine object (null when "todas")
+  const selectedMaquina = useMemo(
+    () => (filterMaquina !== 'todas' ? maquinas.find((m) => m.id === filterMaquina) ?? null : null),
+    [maquinas, filterMaquina]
+  )
+
   // Usos filtrados por rango de fechas y máquina
   const usosFiltrados = useMemo(() => {
     return usos.filter((u) => {
@@ -48,6 +65,15 @@ export default function Informes() {
     })
   }, [usos, desde, hasta, filterMaquina])
 
+  // Mantenimientos filtrados por rango y máquina
+  const mantenimientosFiltrados = useMemo(() => {
+    return mantenimientos.filter((m) => {
+      if (m.fecha < desde || m.fecha > hasta) return false
+      if (filterMaquina !== 'todas' && m.maquina_id !== filterMaquina) return false
+      return true
+    })
+  }, [mantenimientos, desde, hasta, filterMaquina])
+
   // KPIs del rango
   const stats = useMemo(() => {
     const total = usosFiltrados.length
@@ -55,8 +81,17 @@ export default function Informes() {
     const ko = usosFiltrados.filter((u) => u.resultado === 'ko').length
     const pendiente = usosFiltrados.filter((u) => u.resultado === 'pendiente').length
     const inc = incidencias.filter((i) => usosFiltrados.some((u) => u.id === i.uso_id)).length
-    return { total, ok, ko, pendiente, inc }
-  }, [usosFiltrados, incidencias])
+    const mant = mantenimientosFiltrados.length
+    return { total, ok, ko, pendiente, inc, mant }
+  }, [usosFiltrados, incidencias, mantenimientosFiltrados])
+
+  // Determine whether to show preparation columns in the preview table.
+  // When a specific machine is selected, use its requiere_preparacion flag.
+  // When "todas" is selected, show prep columns (some machines may have them).
+  const showPrepColumns = filterMaquina === 'todas' || (selectedMaquina?.requiere_preparacion ?? false)
+
+  // Same logic for lanzamiento columns
+  const showLanzColumns = filterMaquina === 'todas' || (selectedMaquina?.requiere_lanzamiento ?? false)
 
   // -----------------------------------------------------------------------------
   // Exportación Excel — formato FRESATITAN (compatible con los CSV originales)
@@ -85,10 +120,15 @@ export default function Informes() {
         // Máximo de usos en un mismo día
         const maxUsos = Math.max(...Array.from(porFecha.values()).map((a) => a.length))
 
-        // Construir cabecera del Excel como en los CSV originales del cliente
-        const columnasPorUso = maquina.requiere_lanzamiento
-          ? ['Hora preparació', 'Tècnic preparació', 'Punxat (Tècnic)', 'Hora acabat', 'Tècnic acabat', 'Resultat']
-          : ['Hora preparació', 'Tècnic preparació', 'Hora acabat', 'Tècnic acabat', 'Resultat']
+        // Build columns depending on machine capabilities
+        const columnasPorUso: string[] = []
+        if (maquina.requiere_preparacion) {
+          columnasPorUso.push('Hora preparació', 'Tècnic preparació')
+        }
+        if (maquina.requiere_lanzamiento) {
+          columnasPorUso.push('Punxat (Tècnic)')
+        }
+        columnasPorUso.push('Hora acabat', 'Tècnic acabat', 'Resultat')
 
         const header: string[] = ['Data']
         for (let i = 0; i < maxUsos; i++) header.push(...columnasPorUso)
@@ -108,12 +148,13 @@ export default function Informes() {
           for (let i = 0; i < maxUsos; i++) {
             const u = usosDelDia[i]
             if (!u) {
-              // relleno vacío
               for (let c = 0; c < columnasPorUso.length; c++) row.push('')
               continue
             }
-            row.push(formatTime(u.hora_preparacion))
-            row.push(getName(u.tecnico_preparacion_id))
+            if (maquina.requiere_preparacion) {
+              row.push(formatTime(u.hora_preparacion))
+              row.push(getName(u.tecnico_preparacion_id))
+            }
             if (maquina.requiere_lanzamiento) {
               row.push(getName(u.tecnico_lanzamiento_id))
             }
@@ -141,9 +182,34 @@ export default function Informes() {
         ])
 
         const ws = XLSX.utils.aoa_to_sheet(rows)
-        // Ajustar anchos de columna aproximados
         ws['!cols'] = header.map(() => ({ wch: 15 }))
         XLSX.utils.book_append_sheet(wb, ws, maquina.codigo)
+      }
+
+      // Add Mantenimientos sheet when exporting per-machine or when there are records
+      const mantExport = filterMaquina === 'todas'
+        ? mantenimientosFiltrados
+        : mantenimientosFiltrados.filter((m) => m.maquina_id === filterMaquina)
+
+      if (mantExport.length > 0) {
+        const mantHeader = ['Fecha', 'Máquina', 'Tipo', 'Acción realizada', 'Responsable', 'Verificador', 'Validado', 'Observaciones']
+        const mantRows: (string | number)[][] = [mantHeader]
+        for (const m of mantExport) {
+          const maq = maquinasOrdenadas.find((mm) => mm.id === m.maquina_id)
+          mantRows.push([
+            m.fecha,
+            maq ? `${maq.codigo} · ${maq.nombre}` : '—',
+            m.tipo,
+            m.accion_realizada,
+            getName(m.persona_encargada_id),
+            getName(m.persona_verificadora_id),
+            m.validado ? 'Si' : 'No',
+            m.observaciones ?? '',
+          ])
+        }
+        const wsMant = XLSX.utils.aoa_to_sheet(mantRows)
+        wsMant['!cols'] = mantHeader.map(() => ({ wch: 18 }))
+        XLSX.utils.book_append_sheet(wb, wsMant, 'Mantenimientos')
       }
 
       if (wb.SheetNames.length === 0) {
@@ -151,9 +217,12 @@ export default function Informes() {
         return
       }
 
-      const filename = `FRESATITAN_usos_${desde}_${hasta}.xlsx`
+      // Filename includes machine code when exporting a single machine
+      const filename = selectedMaquina
+        ? `${selectedMaquina.codigo}_informe_${desde}_${hasta}.xlsx`
+        : `FRESATITAN_usos_${desde}_${hasta}.xlsx`
       XLSX.writeFile(wb, filename)
-      toast.success(`Descargado ${filename}`, { icon: '📊' })
+      toast.success(`Descargado ${filename}`)
     } catch (err) {
       console.error('[exportarExcel] error:', err)
       toast.error('Error generando el Excel')
@@ -172,11 +241,13 @@ export default function Informes() {
         maquinas: maquinasExport,
         usos: usosFiltrados,
         incidencias,
+        mantenimientos: mantenimientosFiltrados,
         getName,
         desde,
         hasta,
+        selectedMaquina,
       })
-      toast.success(`Descargado ${filename}`, { icon: '📄' })
+      toast.success(`Descargado ${filename}`)
     } catch (err) {
       console.error('[exportarPdfDetallado] error:', err)
       toast.error(err instanceof Error ? err.message : 'Error generando el PDF')
@@ -193,11 +264,13 @@ export default function Informes() {
         maquinas: maquinasOrdenadas,
         usos: usosFiltrados,
         incidencias,
+        mantenimientos: mantenimientosFiltrados,
         getName,
         desde,
         hasta,
+        selectedMaquina,
       })
-      toast.success(`Descargado ${filename}`, { icon: '📄' })
+      toast.success(`Descargado ${filename}`)
     } catch (err) {
       console.error('[exportarPdfResumen] error:', err)
       toast.error('Error generando el PDF')
@@ -208,12 +281,14 @@ export default function Informes() {
     <Layout>
       <TopBar
         title="Informes"
-        subtitle="Exportación a Excel compatible con el formato original del cliente"
+        subtitle={selectedMaquina
+          ? `Informe de ${selectedMaquina.codigo} · ${selectedMaquina.nombre}`
+          : 'Exportación a Excel y PDF por máquina'}
         actions={
           <div className="flex items-center gap-2">
             <button
               onClick={exportarExcel}
-              disabled={stats.total === 0}
+              disabled={stats.total === 0 && stats.mant === 0}
               title="Formato Excel compatible con el histórico del cliente"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
@@ -274,24 +349,38 @@ export default function Informes() {
                 onChange={(e) => setFilterMaquina(e.target.value)}
                 className="input-field text-sm"
               >
-                <option value="todas">Todas ({maquinasOrdenadas.length})</option>
-                {maquinasOrdenadas.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.codigo} · {m.nombre}
-                  </option>
-                ))}
+                <option value="todas">Todas las máquinas ({maquinasOrdenadas.length})</option>
+                {fresadoras.length > 0 && (
+                  <optgroup label="Fresadoras">
+                    {fresadoras.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.codigo} · {m.nombre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {sinterizadoras.length > 0 && (
+                  <optgroup label="Sinterizadoras">
+                    {sinterizadoras.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.codigo} · {m.nombre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
           </div>
         </section>
 
         {/* KPIs del rango */}
-        <section className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <section className="grid grid-cols-2 sm:grid-cols-6 gap-3">
           <StatBlock label="Total usos" value={stats.total} />
           <StatBlock label="Correctos" value={stats.ok} className="text-activa" />
           <StatBlock label="Con KO" value={stats.ko} className="text-averia" />
           <StatBlock label="En curso" value={stats.pendiente} className="text-parada" />
           <StatBlock label="Incidencias" value={stats.inc} className="text-averia" />
+          <StatBlock label="Mantenimientos" value={stats.mant} className="text-mantenimiento" />
         </section>
 
         {/* Tabla preview */}
@@ -316,9 +405,9 @@ export default function Informes() {
                     <tr className="bg-surface-3/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-tertiary">
                       <th className="px-3 py-2 text-left">Máquina</th>
                       <th className="px-3 py-2 text-left">Fecha</th>
-                      <th className="px-3 py-2 text-left">Prep.</th>
-                      <th className="px-3 py-2 text-left">Técnico prep.</th>
-                      <th className="px-3 py-2 text-left">Lanz.</th>
+                      {showPrepColumns && <th className="px-3 py-2 text-left">Prep.</th>}
+                      {showPrepColumns && <th className="px-3 py-2 text-left">Técnico prep.</th>}
+                      {showLanzColumns && <th className="px-3 py-2 text-left">Lanz.</th>}
                       <th className="px-3 py-2 text-left">Acabado</th>
                       <th className="px-3 py-2 text-left">Técnico acab.</th>
                       <th className="px-3 py-2 text-center">Resultado</th>
@@ -330,7 +419,16 @@ export default function Informes() {
                       .slice(0, 50)
                       .map((u) => {
                         const m = maquinasOrdenadas.find((mm) => mm.id === u.maquina_id)
-                        return <UsoRow key={u.id} uso={u} maquina={m} getName={getName} />
+                        return (
+                          <UsoRow
+                            key={u.id}
+                            uso={u}
+                            maquina={m}
+                            getName={getName}
+                            showPrepColumns={showPrepColumns}
+                            showLanzColumns={showLanzColumns}
+                          />
+                        )
                       })}
                   </tbody>
                 </table>
@@ -375,20 +473,26 @@ function UsoRow({
   uso,
   maquina,
   getName,
+  showPrepColumns,
+  showLanzColumns,
 }: {
   uso: UsoEquipo
   maquina: Maquina | undefined
   getName: (id: string | null) => string
+  showPrepColumns: boolean
+  showLanzColumns: boolean
 }) {
   return (
     <tr className="border-b border-border-subtle last:border-b-0 hover:bg-surface-3/40 transition-colors">
       <td className="px-3 py-2 font-mono text-[10px] text-primary">{maquina?.codigo ?? '—'}</td>
       <td className="px-3 py-2 font-mono text-text-secondary">{uso.fecha}</td>
-      <td className="px-3 py-2 font-mono text-text-secondary">{formatTime(uso.hora_preparacion)}</td>
-      <td className="px-3 py-2 text-text-primary">{getName(uso.tecnico_preparacion_id)}</td>
-      <td className="px-3 py-2 text-text-tertiary">
-        {maquina?.requiere_lanzamiento ? getName(uso.tecnico_lanzamiento_id) : '—'}
-      </td>
+      {showPrepColumns && <td className="px-3 py-2 font-mono text-text-secondary">{formatTime(uso.hora_preparacion)}</td>}
+      {showPrepColumns && <td className="px-3 py-2 text-text-primary">{getName(uso.tecnico_preparacion_id)}</td>}
+      {showLanzColumns && (
+        <td className="px-3 py-2 text-text-tertiary">
+          {maquina?.requiere_lanzamiento ? getName(uso.tecnico_lanzamiento_id) : '—'}
+        </td>
+      )}
       <td className="px-3 py-2 font-mono text-text-secondary">{formatTime(uso.hora_acabado)}</td>
       <td className="px-3 py-2 text-text-primary">{uso.tecnico_acabado_id ? getName(uso.tecnico_acabado_id) : '—'}</td>
       <td className="px-3 py-2 text-center">

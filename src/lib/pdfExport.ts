@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf'
-import type { UsoEquipo, Maquina, Incidencia } from '../types/database'
+import type { UsoEquipo, Maquina, Incidencia, Mantenimiento } from '../types/database'
 import { formatTime } from './utils'
 
 // =============================================================================
@@ -8,21 +8,28 @@ import { formatTime } from './utils'
 // Dos formatos:
 //   A) Tabla por máquina con todos los usos del rango (para imprimir / archivar)
 //   B) Resumen ejecutivo con KPIs y top máquinas (una página, tipo dashboard)
+//
+// Both formats adapt columns based on machine type:
+//   - Sinterizadoras (requiere_preparacion=true): include preparation columns
+//   - Fresadoras (requiere_preparacion=false): omit preparation columns
 // =============================================================================
 
 export interface PdfExportData {
   maquinas: Maquina[]
   usos: UsoEquipo[]
   incidencias: Incidencia[]
+  mantenimientos: Mantenimiento[]
   getName: (id: string | null) => string
   desde: string
   hasta: string
+  /** When a specific machine is selected; null for "todas" */
+  selectedMaquina: Maquina | null
 }
 
 // -----------------------------------------------------------------------------
 // FORMATO A — Tabla por máquina
 // -----------------------------------------------------------------------------
-export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, getName, desde, hasta }: PdfExportData) {
+export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, mantenimientos, getName, desde, hasta, selectedMaquina }: PdfExportData) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -63,21 +70,28 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, getName,
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
     doc.setTextColor(120)
+    const tipoLabel = maquina.tipo === 'sinterizadora' ? 'SINTERIZADORA' : 'FRESADORA'
+    const prepLabel = maquina.requiere_preparacion ? 'Con preparación' : 'Sin preparación'
+    const lanzLabel = maquina.requiere_lanzamiento ? ' · Con lanzamiento' : ''
     doc.text(
-      `${maquina.tipo.toUpperCase()} · ${maquina.requiere_lanzamiento ? 'Con lanzamiento manual' : 'Sin lanzamiento'}` +
+      `${tipoLabel} · ${prepLabel}${lanzLabel}` +
         (maquina.ubicacion ? ` · ${maquina.ubicacion}` : ''),
       marginX,
       marginTop + 13
     )
 
-    // Tabla de usos
-    const colX = maquina.requiere_lanzamiento
-      ? [marginX, marginX + 22, marginX + 40, marginX + 65, marginX + 90, marginX + 110, marginX + 135, marginX + 155, marginX + 175, marginX + 205, marginX + 260]
-      : [marginX, marginX + 22, marginX + 45, marginX + 75, marginX + 100, marginX + 130, marginX + 165, marginX + 220, marginX + 275]
+    // Build columns depending on machine capabilities
+    const colTitulos: string[] = ['Fecha']
+    if (maquina.requiere_preparacion) {
+      colTitulos.push('Hora prep.', 'Técnico prep.')
+    }
+    if (maquina.requiere_lanzamiento) {
+      colTitulos.push('Lanz. (hora)', 'Téc. lanz.')
+    }
+    colTitulos.push('Hora acab.', 'Téc. acab.', 'Result.', 'Incidencias', 'Observaciones')
 
-    const colTitulos = maquina.requiere_lanzamiento
-      ? ['Fecha', 'Hora prep.', 'Técnico prep.', 'Lanz. (hora)', 'Téc. lanz.', 'Hora acab.', 'Téc. acab.', 'Result.', 'Incidencias', 'Observaciones']
-      : ['Fecha', 'Hora prep.', 'Técnico prep.', 'Hora acab.', 'Téc. acab.', 'Result.', 'Incidencias', 'Observaciones']
+    // Calculate column positions dynamically
+    const colX = buildColumnPositions(marginX, pageWidth - marginX * 2, colTitulos.length)
 
     let y = marginTop + 20
 
@@ -105,29 +119,20 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, getName,
       const resColor: [number, number, number] =
         u.resultado === 'ok' ? [34, 197, 94] : u.resultado === 'ko' ? [239, 68, 68] : [245, 158, 11]
 
-      const values = maquina.requiere_lanzamiento
-        ? [
-            u.fecha,
-            formatTime(u.hora_preparacion),
-            getName(u.tecnico_preparacion_id),
-            '',
-            getName(u.tecnico_lanzamiento_id),
-            formatTime(u.hora_acabado),
-            u.tecnico_acabado_id ? getName(u.tecnico_acabado_id) : '',
-            u.resultado.toUpperCase(),
-            truncate(incTxt, 40),
-            truncate(u.observaciones ?? '', 30),
-          ]
-        : [
-            u.fecha,
-            formatTime(u.hora_preparacion),
-            getName(u.tecnico_preparacion_id),
-            formatTime(u.hora_acabado),
-            u.tecnico_acabado_id ? getName(u.tecnico_acabado_id) : '',
-            u.resultado.toUpperCase(),
-            truncate(incTxt, 50),
-            truncate(u.observaciones ?? '', 40),
-          ]
+      const values: string[] = [u.fecha]
+      if (maquina.requiere_preparacion) {
+        values.push(formatTime(u.hora_preparacion))
+        values.push(getName(u.tecnico_preparacion_id))
+      }
+      if (maquina.requiere_lanzamiento) {
+        values.push('') // placeholder for lanz. hora (not stored separately)
+        values.push(getName(u.tecnico_lanzamiento_id))
+      }
+      values.push(formatTime(u.hora_acabado))
+      values.push(u.tecnico_acabado_id ? getName(u.tecnico_acabado_id) : '')
+      values.push(u.resultado.toUpperCase())
+      values.push(truncate(incTxt, 40))
+      values.push(truncate(u.observaciones ?? '', 30))
 
       values.forEach((v, i) => {
         if (colTitulos[i] === 'Result.') {
@@ -143,13 +148,24 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, getName,
       y += 5
     }
 
-    // Footer con total
+    // Summary section per machine
     y += 3
+    const okCount = usosDeMaquina.filter((u) => u.resultado === 'ok').length
+    const koCount = usosDeMaquina.filter((u) => u.resultado === 'ko').length
+    const mantCount = mantenimientos.filter((m) => m.maquina_id === maquina.id).length
+    const tasaOk = usosDeMaquina.length > 0 ? Math.round((okCount / usosDeMaquina.length) * 100) : 0
+
     doc.setFontSize(7)
-    doc.setTextColor(120)
-    doc.text(`Total usos: ${usosDeMaquina.length}`, marginX, y)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(80)
+    doc.text(
+      `Total usos: ${usosDeMaquina.length}  |  OK: ${okCount}  |  KO: ${koCount}  |  Tasa OK: ${tasaOk}%  |  Mantenimientos: ${mantCount}`,
+      marginX,
+      y
+    )
 
     // Pie de página
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(7)
     doc.setTextColor(150)
     doc.text(
@@ -165,7 +181,9 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, getName,
     throw new Error('Sin datos en el rango seleccionado')
   }
 
-  const filename = `FRESATITAN_informe_detallado_${desde}_${hasta}.pdf`
+  const filename = selectedMaquina
+    ? `${selectedMaquina.codigo}_detallado_${desde}_${hasta}.pdf`
+    : `FRESATITAN_informe_detallado_${desde}_${hasta}.pdf`
   doc.save(filename)
   return filename
 }
@@ -173,7 +191,7 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, getName,
 // -----------------------------------------------------------------------------
 // FORMATO B — Resumen ejecutivo (una página con KPIs)
 // -----------------------------------------------------------------------------
-export function exportPdfResumenEjecutivo({ maquinas, usos, incidencias, desde, hasta }: PdfExportData) {
+export function exportPdfResumenEjecutivo({ maquinas, usos, incidencias, mantenimientos, desde, hasta, selectedMaquina }: PdfExportData) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
 
@@ -185,16 +203,29 @@ export function exportPdfResumenEjecutivo({ maquinas, usos, incidencias, desde, 
 
   doc.setFontSize(11)
   doc.setTextColor(100)
-  doc.text('Resumen ejecutivo de producción', pageWidth / 2, 32, { align: 'center' })
+  const subtitle = selectedMaquina
+    ? `Resumen · ${selectedMaquina.codigo} · ${selectedMaquina.nombre}`
+    : 'Resumen ejecutivo de producción'
+  doc.text(subtitle, pageWidth / 2, 32, { align: 'center' })
 
   doc.setFontSize(9)
   doc.setTextColor(130)
   doc.text(`Periodo: ${desde}  →  ${hasta}`, pageWidth / 2, 38, { align: 'center' })
 
+  // Machine type indicator when per-machine
+  if (selectedMaquina) {
+    doc.setFontSize(8)
+    doc.setTextColor(150)
+    const tipoLabel = selectedMaquina.tipo === 'sinterizadora' ? 'Sinterizadora' : 'Fresadora'
+    const prepLabel = selectedMaquina.requiere_preparacion ? ' · Con preparación' : ' · Sin preparación'
+    doc.text(`${tipoLabel}${prepLabel}`, pageWidth / 2, 43, { align: 'center' })
+  }
+
   // Línea separadora
   doc.setDrawColor(208, 154, 64)
   doc.setLineWidth(0.5)
-  doc.line(20, 42, pageWidth - 20, 42)
+  const lineY = selectedMaquina ? 47 : 42
+  doc.line(20, lineY, pageWidth - 20, lineY)
 
   // KPIs
   const total = usos.length
@@ -202,6 +233,7 @@ export function exportPdfResumenEjecutivo({ maquinas, usos, incidencias, desde, 
   const ko = usos.filter((u) => u.resultado === 'ko').length
   const pendiente = usos.filter((u) => u.resultado === 'pendiente').length
   const tasaOk = total > 0 ? Math.round((ok / total) * 100) : 0
+  const totalMant = mantenimientos.length
 
   const kpis: { label: string; value: string | number; color: [number, number, number] }[] = [
     { label: 'Total usos', value: total, color: [40, 40, 40] },
@@ -212,17 +244,23 @@ export function exportPdfResumenEjecutivo({ maquinas, usos, incidencias, desde, 
     { label: 'Incidencias', value: incidencias.length, color: [239, 68, 68] },
   ]
 
-  // Grid 3x2 de KPIs
-  const startY = 55
+  // When per-machine, add maintenance KPI
+  if (selectedMaquina) {
+    kpis.push({ label: 'Mantenimientos', value: totalMant, color: [59, 130, 246] })
+  }
+
+  // Grid of KPIs
+  const startY = lineY + 13
   const cardW = 55
   const cardH = 28
   const gapX = 5
   const gapY = 5
-  const startX = (pageWidth - (3 * cardW + 2 * gapX)) / 2
+  const cols = selectedMaquina ? 4 : 3
+  const startX = (pageWidth - (cols * cardW + (cols - 1) * gapX)) / 2
 
   kpis.forEach((kpi, idx) => {
-    const row = Math.floor(idx / 3)
-    const col = idx % 3
+    const row = Math.floor(idx / cols)
+    const col = idx % cols
     const x = startX + col * (cardW + gapX)
     const y = startY + row * (cardH + gapY)
 
@@ -244,97 +282,136 @@ export function exportPdfResumenEjecutivo({ maquinas, usos, incidencias, desde, 
     doc.text(kpi.label.toUpperCase(), x + cardW / 2, y + 23, { align: 'center' })
   })
 
-  // Top máquinas más usadas
-  const usosByMaquina = new Map<string, number>()
-  for (const u of usos) {
-    usosByMaquina.set(u.maquina_id, (usosByMaquina.get(u.maquina_id) ?? 0) + 1)
+  const kpiRows = Math.ceil(kpis.length / cols)
+
+  // Top máquinas más usadas (only in "todas" mode)
+  let nextSectionY = startY + kpiRows * (cardH + gapY) + 10
+
+  if (!selectedMaquina) {
+    const usosByMaquina = new Map<string, number>()
+    for (const u of usos) {
+      usosByMaquina.set(u.maquina_id, (usosByMaquina.get(u.maquina_id) ?? 0) + 1)
+    }
+    const topMaquinas = Array.from(usosByMaquina.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, count]) => ({
+        maquina: maquinas.find((m) => m.id === id),
+        count,
+      }))
+      .filter((x) => x.maquina)
+
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(40)
+    doc.text('Top 5 máquinas más usadas', 20, nextSectionY)
+
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.2)
+    doc.line(20, nextSectionY + 2, pageWidth - 20, nextSectionY + 2)
+
+    let ty = nextSectionY + 9
+    const maxCount = topMaquinas[0]?.count ?? 1
+
+    for (const { maquina, count } of topMaquinas) {
+      if (!maquina) continue
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(208, 154, 64)
+      doc.text(maquina.codigo, 22, ty)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(40)
+      doc.text(maquina.nombre, 48, ty)
+
+      // Barra
+      const barMaxW = 90
+      const barW = (count / maxCount) * barMaxW
+      doc.setFillColor(208, 154, 64)
+      doc.rect(pageWidth - 20 - barMaxW, ty - 3, barW, 4, 'F')
+      doc.setFillColor(240, 235, 225)
+      doc.rect(pageWidth - 20 - barMaxW + barW, ty - 3, barMaxW - barW, 4, 'F')
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(40)
+      doc.text(String(count), pageWidth - 18, ty, { align: 'right' })
+
+      ty += 8
+    }
+
+    nextSectionY = ty + 10
   }
-  const topMaquinas = Array.from(usosByMaquina.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([id, count]) => ({
-      maquina: maquinas.find((m) => m.id === id),
-      count,
-    }))
-    .filter((x) => x.maquina)
 
-  const topStartY = startY + 2 * (cardH + gapY) + 10
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(40)
-  doc.text('Top 5 máquinas más usadas', 20, topStartY)
-
-  doc.setDrawColor(220, 220, 220)
-  doc.setLineWidth(0.2)
-  doc.line(20, topStartY + 2, pageWidth - 20, topStartY + 2)
-
-  let ty = topStartY + 9
-  const maxCount = topMaquinas[0]?.count ?? 1
-
-  for (const { maquina, count } of topMaquinas) {
-    if (!maquina) continue
-    // Código + nombre
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(208, 154, 64)
-    doc.text(maquina.codigo, 22, ty)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(40)
-    doc.text(maquina.nombre, 48, ty)
-
-    // Barra
-    const barMaxW = 90
-    const barW = (count / maxCount) * barMaxW
-    doc.setFillColor(208, 154, 64)
-    doc.rect(pageWidth - 20 - barMaxW, ty - 3, barW, 4, 'F')
-    doc.setFillColor(240, 235, 225)
-    doc.rect(pageWidth - 20 - barMaxW + barW, ty - 3, barMaxW - barW, 4, 'F')
-
-    // Count
-    doc.setFontSize(9)
+  // Maintenance summary (always shown for per-machine, optional for "todas")
+  if (mantenimientos.length > 0) {
+    doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(40)
-    doc.text(String(count), pageWidth - 18, ty, { align: 'right' })
+    doc.text(selectedMaquina ? 'Mantenimientos registrados' : 'Últimos mantenimientos', 20, nextSectionY)
 
-    ty += 8
+    doc.setDrawColor(220, 220, 220)
+    doc.line(20, nextSectionY + 2, pageWidth - 20, nextSectionY + 2)
+
+    let my = nextSectionY + 9
+    const recentMant = [...mantenimientos]
+      .sort((a, b) => b.fecha.localeCompare(a.fecha))
+      .slice(0, 6)
+
+    for (const m of recentMant) {
+      if (my > 265) break
+      const maq = maquinas.find((mm) => mm.id === m.maquina_id)
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(59, 130, 246) // blue
+      doc.text(m.fecha, 22, my)
+      doc.setTextColor(208, 154, 64)
+      doc.text(maq?.codigo ?? '—', 48, my)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(40)
+      doc.text(`${m.tipo} · ${truncate(m.accion_realizada, 70)}`, 70, my)
+      my += 5
+    }
+
+    nextSectionY = my + 5
   }
 
   // Incidencias recientes
-  const incidenciasStartY = ty + 10
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(40)
-  doc.text('Últimas incidencias reportadas', 20, incidenciasStartY)
+  if (nextSectionY < 250) {
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(40)
+    doc.text('Últimas incidencias reportadas', 20, nextSectionY)
 
-  doc.setDrawColor(220, 220, 220)
-  doc.line(20, incidenciasStartY + 2, pageWidth - 20, incidenciasStartY + 2)
+    doc.setDrawColor(220, 220, 220)
+    doc.line(20, nextSectionY + 2, pageWidth - 20, nextSectionY + 2)
 
-  let iy = incidenciasStartY + 9
-  const ultimasIncidencias = [...incidencias]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 8)
+    let iy = nextSectionY + 9
+    const ultimasIncidencias = [...incidencias]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 8)
 
-  if (ultimasIncidencias.length === 0) {
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'italic')
-    doc.setTextColor(150)
-    doc.text('Sin incidencias en el periodo.', 22, iy)
-  } else {
-    for (const inc of ultimasIncidencias) {
-      if (iy > 270) break
-      const uso = usos.find((u) => u.id === inc.uso_id)
-      const maquina = uso ? maquinas.find((m) => m.id === uso.maquina_id) : null
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(239, 68, 68)
-      doc.text('⚠', 22, iy)
-      doc.setTextColor(208, 154, 64)
-      doc.text(maquina?.codigo ?? '—', 27, iy)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(40)
-      doc.text(truncate(inc.descripcion, 100), 48, iy)
-      iy += 5
+    if (ultimasIncidencias.length === 0) {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(150)
+      doc.text('Sin incidencias en el periodo.', 22, iy)
+    } else {
+      for (const inc of ultimasIncidencias) {
+        if (iy > 270) break
+        const uso = usos.find((u) => u.id === inc.uso_id)
+        const maquina = uso ? maquinas.find((m) => m.id === uso.maquina_id) : null
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(239, 68, 68)
+        doc.text('!', 22, iy)
+        doc.setTextColor(208, 154, 64)
+        doc.text(maquina?.codigo ?? '—', 27, iy)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(40)
+        doc.text(truncate(inc.descripcion, 100), 48, iy)
+        iy += 5
+      }
     }
   }
 
@@ -348,12 +425,29 @@ export function exportPdfResumenEjecutivo({ maquinas, usos, incidencias, desde, 
     { align: 'center' }
   )
 
-  const filename = `FRESATITAN_resumen_${desde}_${hasta}.pdf`
+  const filename = selectedMaquina
+    ? `${selectedMaquina.codigo}_resumen_${desde}_${hasta}.pdf`
+    : `FRESATITAN_resumen_${desde}_${hasta}.pdf`
   doc.save(filename)
   return filename
 }
 
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
 function truncate(str: string, max: number): string {
   if (!str) return ''
-  return str.length > max ? str.slice(0, max - 1) + '…' : str
+  return str.length > max ? str.slice(0, max - 1) + '...' : str
+}
+
+/**
+ * Distribute column positions evenly across the available width.
+ */
+function buildColumnPositions(startX: number, totalWidth: number, numCols: number): number[] {
+  const positions: number[] = []
+  const colWidth = totalWidth / numCols
+  for (let i = 0; i < numCols; i++) {
+    positions.push(startX + i * colWidth)
+  }
+  return positions
 }
