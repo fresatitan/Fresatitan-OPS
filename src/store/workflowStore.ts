@@ -33,18 +33,18 @@ import type {
 const nowIso = new Date().toISOString()
 
 const SEED_MAQUINAS: Maquina[] = [
-  { id: 'm1',  codigo: 'REF-030', nombre: 'Fresadora UP3D ZR',               tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm2',  codigo: 'REF-057', nombre: 'Fresadora P53 ZR',                tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm3',  codigo: 'REF-062', nombre: 'Fresadora UP3D Disilicato',       tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm4',  codigo: 'REF-039', nombre: 'Fresadora CM Fanuc 1',            tipo: 'fresadora',    numero_serie: '188ZG886', descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm5',  codigo: 'REF-040', nombre: 'Fresadora CM Fanuc 2',            tipo: 'fresadora',    numero_serie: '229AG695', descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm6',  codigo: 'REF-042', nombre: 'Fresadora Biomill',               tipo: 'fresadora',    numero_serie: '1020',     descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm7',  codigo: 'REF-041', nombre: 'Fresadora CM Lilian',             tipo: 'fresadora',    numero_serie: '12654',    descripcion: 'Retirada del servicio', ubicacion: 'Zona CNC', estado_actual: 'inactiva', requiere_lanzamiento: true, activa: false, created_at: nowIso, updated_at: nowIso },
-  { id: 'm8',  codigo: 'REF-045', nombre: 'Sinterizadora Trumpf Multilaser', tipo: 'sinterizadora', numero_serie: 'S0711Q0182', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
-  { id: 'm9',  codigo: 'REF-046', nombre: 'Sinterizadora Trumpf 3D Laser',   tipo: 'sinterizadora', numero_serie: 'S0711Q0182', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
-  { id: 'm10', codigo: 'REF-047', nombre: 'Sinterizadora Trumpf',            tipo: 'sinterizadora', numero_serie: 'S0711Q0022', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
-  { id: 'm11', codigo: 'REF-048', nombre: 'Sinterizadora Sisma 1',           tipo: 'sinterizadora', numero_serie: 'LS005865',   descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
-  { id: 'm12', codigo: 'REF-049', nombre: 'Sinterizadora Sisma 2',           tipo: 'sinterizadora', numero_serie: 'LS0008790',  descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm1',  codigo: 'REF-030', nombre: 'Fresadora UP3D ZR',               tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm2',  codigo: 'REF-057', nombre: 'Fresadora P53 ZR',                tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm3',  codigo: 'REF-062', nombre: 'Fresadora UP3D Disilicato',       tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm4',  codigo: 'REF-039', nombre: 'Fresadora CM Fanuc 1',            tipo: 'fresadora',    numero_serie: '188ZG886', descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm5',  codigo: 'REF-040', nombre: 'Fresadora CM Fanuc 2',            tipo: 'fresadora',    numero_serie: '229AG695', descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm6',  codigo: 'REF-042', nombre: 'Fresadora Biomill',               tipo: 'fresadora',    numero_serie: '1020',     descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm7',  codigo: 'REF-041', nombre: 'Fresadora CM Lilian',             tipo: 'fresadora',    numero_serie: '12654',    descripcion: 'Retirada del servicio', ubicacion: 'Zona CNC', estado_actual: 'inactiva', requiere_preparacion: false, requiere_lanzamiento: true, activa: false, created_at: nowIso, updated_at: nowIso },
+  { id: 'm8',  codigo: 'REF-045', nombre: 'Sinterizadora Trumpf Multilaser', tipo: 'sinterizadora', numero_serie: 'S0711Q0182', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm9',  codigo: 'REF-046', nombre: 'Sinterizadora Trumpf 3D Laser',   tipo: 'sinterizadora', numero_serie: 'S0711Q0182', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm10', codigo: 'REF-047', nombre: 'Sinterizadora Trumpf',            tipo: 'sinterizadora', numero_serie: 'S0711Q0022', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm11', codigo: 'REF-048', nombre: 'Sinterizadora Sisma 1',           tipo: 'sinterizadora', numero_serie: 'LS005865',   descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm12', codigo: 'REF-049', nombre: 'Sinterizadora Sisma 2',           tipo: 'sinterizadora', numero_serie: 'LS0008790',  descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
 ]
 
 // -----------------------------------------------------------------------------
@@ -66,7 +66,7 @@ export interface IniciarUsoInput {
   maquina_id: string
   fecha?: string
   hora_preparacion?: string
-  tecnico_preparacion_id: string
+  tecnico_preparacion_id: string | null
   tecnico_lanzamiento_id?: string | null
   observaciones?: string | null
 }
@@ -117,8 +117,8 @@ interface WorkflowState {
   registrarMantenimiento: (input: NuevoMantenimientoInput) => Promise<string | null>
 
   // Maquinas CRUD (solo admin, desde /maquinas)
-  addMaquina: (data: Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion'>) => Promise<void>
-  updateMaquina: (id: string, data: Partial<Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion' | 'activa'>>) => Promise<void>
+  addMaquina: (data: Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_preparacion' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion'>) => Promise<void>
+  updateMaquina: (id: string, data: Partial<Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_preparacion' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion' | 'activa'>>) => Promise<void>
   removeMaquina: (id: string) => Promise<void>
   updateEstadoMaquina: (maquinaId: string, estado: EstadoMaquina) => Promise<void>
   reportarAveria: (maquinaId: string, motivo: string, usuarioId?: string | null) => Promise<void>
@@ -446,6 +446,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       descripcion: data.descripcion ?? null,
       ubicacion: data.ubicacion ?? null,
       estado_actual: 'parada' as EstadoMaquina,
+      requiere_preparacion: data.requiere_preparacion ?? true,
       requiere_lanzamiento: data.requiere_lanzamiento,
       activa: true,
     }

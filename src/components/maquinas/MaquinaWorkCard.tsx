@@ -119,7 +119,7 @@ function ActiveUsoBar({
   onFinish,
 }: {
   maquina: Maquina
-  uso: { fecha: string; hora_preparacion: string; tecnico_preparacion_id: string; tecnico_lanzamiento_id: string | null }
+  uso: { fecha: string; hora_preparacion: string; tecnico_preparacion_id: string | null; tecnico_lanzamiento_id: string | null }
   onFinish: () => void
 }) {
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
@@ -135,10 +135,12 @@ function ActiveUsoBar({
         <span className="font-mono text-xs text-activa tabular-nums shrink-0">{elapsed}</span>
       </div>
       <div className="mt-1.5 space-y-0.5">
-        <div className="flex items-center justify-between text-[10px]">
-          <span className="text-text-tertiary">Prep.</span>
-          <span className="text-text-secondary">{formatTime(uso.hora_preparacion)} · {getName(uso.tecnico_preparacion_id)}</span>
-        </div>
+        {uso.tecnico_preparacion_id && (
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="text-text-tertiary">Prep.</span>
+            <span className="text-text-secondary">{formatTime(uso.hora_preparacion)} · {getName(uso.tecnico_preparacion_id)}</span>
+          </div>
+        )}
         {maquina.requiere_lanzamiento && uso.tecnico_lanzamiento_id && (
           <div className="flex items-center justify-between text-[10px]">
             <span className="text-text-tertiary">Lanz.</span>

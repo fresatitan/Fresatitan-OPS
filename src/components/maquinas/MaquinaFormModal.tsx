@@ -17,6 +17,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
   const [codigo, setCodigo] = useState('')
   const [nombre, setNombre] = useState('')
   const [tipo, setTipo] = useState<TipoMaquina>('fresadora')
+  const [requierePreparacion, setRequierePreparacion] = useState(false)
   const [requiereLanzamiento, setRequiereLanzamiento] = useState(false)
   const [descripcion, setDescripcion] = useState('')
   const [ubicacion, setUbicacion] = useState('')
@@ -25,12 +26,23 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
     if (open) {
       setCodigo(initial?.codigo ?? '')
       setNombre(initial?.nombre ?? '')
-      setTipo(initial?.tipo ?? 'fresadora')
+      const t = initial?.tipo ?? 'fresadora'
+      setTipo(t)
+      // Default: sinterizadoras requieren preparación, fresadoras no
+      setRequierePreparacion(initial?.requiere_preparacion ?? (t === 'sinterizadora'))
       setRequiereLanzamiento(initial?.requiere_lanzamiento ?? false)
       setDescripcion(initial?.descripcion ?? '')
       setUbicacion(initial?.ubicacion ?? '')
     }
   }, [open, initial])
+
+  // Cuando cambia el tipo y es una máquina nueva, auto-ajustar el default
+  const handleTipoChange = (newTipo: TipoMaquina) => {
+    setTipo(newTipo)
+    if (!initial) {
+      setRequierePreparacion(newTipo === 'sinterizadora')
+    }
+  }
 
   const canSubmit = codigo.trim() && nombre.trim()
 
@@ -40,6 +52,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
       codigo: codigo.trim(),
       nombre: nombre.trim(),
       tipo,
+      requiere_preparacion: requierePreparacion,
       requiere_lanzamiento: requiereLanzamiento,
       descripcion: descripcion.trim() || null,
       ubicacion: ubicacion.trim() || null,
@@ -81,7 +94,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
             {(['fresadora', 'sinterizadora'] as TipoMaquina[]).map((t) => (
               <button
                 key={t}
-                onClick={() => setTipo(t)}
+                onClick={() => handleTipoChange(t)}
                 className={`
                   px-3 py-2 rounded border text-xs font-medium transition-colors
                   ${tipo === t
@@ -94,6 +107,27 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
               </button>
             ))}
           </div>
+        </Field>
+
+        <Field label="Requiere preparación">
+          <button
+            onClick={() => setRequierePreparacion(!requierePreparacion)}
+            className={`
+              w-full px-3 py-2.5 rounded border text-xs font-medium text-left transition-colors flex items-center justify-between
+              ${requierePreparacion
+                ? 'bg-primary-muted border-primary/30 text-primary'
+                : 'bg-surface-3 border-border-subtle text-text-secondary'
+              }
+            `}
+          >
+            <span>{requierePreparacion ? 'Sí — el trabajador indica quién prepara' : 'No — va directo a producción'}</span>
+            <span className={`w-8 h-4 rounded-full relative ${requierePreparacion ? 'bg-primary' : 'bg-surface-4'}`}>
+              <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${requierePreparacion ? 'left-4' : 'left-0.5'}`} />
+            </span>
+          </button>
+          <p className="text-[10px] text-text-tertiary mt-1">
+            Si se activa, el trabajador seleccionará quién prepara la máquina antes de empezar.
+          </p>
         </Field>
 
         <Field label="Requiere técnico de lanzamiento">

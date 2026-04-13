@@ -12,15 +12,18 @@ import RequireAuth from './components/auth/RequireAuth'
 import { useAuthStore } from './store/authStore'
 import { useWorkflowStore } from './store/workflowStore'
 import { useTrabajadoresStore } from './store/trabajadoresStore'
+import { isNative } from './lib/capacitor'
 
 export default function App() {
   const initializeAuth = useAuthStore((s) => s.initialize)
 
   useEffect(() => {
-    // Auth
-    initializeAuth()
+    // Auth solo en web (admin). En APK no hay login.
+    if (!isNative) initializeAuth()
 
-    // Datos de negocio (compartidos entre Panel público y Dashboard admin)
+    // Datos de negocio — compartidos entre APK (panel) y web (admin)
+    // Ambos leen de la misma BD Supabase: lo que el trabajador registra
+    // en la APK se ve en tiempo real en el dashboard del admin
     useWorkflowStore.getState().fetchAll()
     useTrabajadoresStore.getState().fetchAll()
 
@@ -44,16 +47,20 @@ export default function App() {
         }}
       />
       <Routes>
-        {/* Públicas */}
+        {/* Panel de Planta — disponible en APK y web */}
         <Route path="/panel" element={<Panel />} />
-        <Route path="/login" element={<Login />} />
 
-        {/* Admin — protegidas */}
-        <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
-        <Route path="/maquinas" element={<RequireAuth><Maquinas /></RequireAuth>} />
-        <Route path="/trabajadores" element={<RequireAuth><Trabajadores /></RequireAuth>} />
-        <Route path="/alertas" element={<RequireAuth><Alertas /></RequireAuth>} />
-        <Route path="/informes" element={<RequireAuth><Informes /></RequireAuth>} />
+        {/* Admin — solo en web, no en APK */}
+        {!isNative && (
+          <>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/maquinas" element={<RequireAuth><Maquinas /></RequireAuth>} />
+            <Route path="/trabajadores" element={<RequireAuth><Trabajadores /></RequireAuth>} />
+            <Route path="/alertas" element={<RequireAuth><Alertas /></RequireAuth>} />
+            <Route path="/informes" element={<RequireAuth><Informes /></RequireAuth>} />
+          </>
+        )}
 
         {/* Catch-all */}
         <Route path="*" element={<CatchAllRedirect />} />
@@ -64,5 +71,7 @@ export default function App() {
 
 function CatchAllRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  // En APK nativo siempre va al panel de planta (es la app de trabajadores)
+  if (isNative) return <Navigate to="/panel" replace />
   return <Navigate to={isAuthenticated ? '/' : '/panel'} replace />
 }

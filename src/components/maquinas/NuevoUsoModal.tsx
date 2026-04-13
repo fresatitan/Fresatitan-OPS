@@ -35,7 +35,8 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   const trabajadores = useTrabajadoresStore((s) => s.trabajadores)
   const candidatos = trabajadores.filter((t) => t.activo && t.puede_operar)
 
-  const [step, setStep] = useState<Step>('preparacion')
+  const initialStep: Step = maquina.requiere_preparacion ? 'preparacion' : 'confirmar'
+  const [step, setStep] = useState<Step>(initialStep)
   const [tecnicoPrep, setTecnicoPrep] = useState<Trabajador | null>(null)
   const [tecnicoLanz, setTecnicoLanz] = useState<Trabajador | null>(null)
   const [showAjustes, setShowAjustes] = useState(false)
@@ -47,7 +48,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
 
   useEffect(() => {
     if (open) {
-      setStep('preparacion')
+      setStep(maquina.requiere_preparacion ? 'preparacion' : 'confirmar')
       setTecnicoPrep(null)
       setTecnicoLanz(null)
       setShowAjustes(false)
@@ -57,7 +58,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
       setAveriaMotivo('')
       setAveriaTecnico(null)
     }
-  }, [open])
+  }, [open, maquina.requiere_preparacion])
 
   const handleReportarAveria = async () => {
     if (!averiaMotivo.trim()) return
@@ -83,14 +84,14 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   const [submitting, setSubmitting] = useState(false)
 
   const handleConfirmar = async () => {
-    if (!tecnicoPrep) return
+    if (maquina.requiere_preparacion && !tecnicoPrep) return
     if (maquina.requiere_lanzamiento && !tecnicoLanz) return
     setSubmitting(true)
     const id = await iniciarUso({
       maquina_id: maquina.id,
       fecha,
       hora_preparacion: hora,
-      tecnico_preparacion_id: tecnicoPrep.id,
+      tecnico_preparacion_id: tecnicoPrep?.id ?? null,
       tecnico_lanzamiento_id: tecnicoLanz?.id ?? null,
       observaciones: observaciones.trim() || null,
     })
@@ -105,10 +106,12 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
 
   const handleBack = () => {
     if (step === 'confirmar') {
-      setStep(maquina.requiere_lanzamiento ? 'lanzamiento' : 'preparacion')
+      if (maquina.requiere_lanzamiento) setStep('lanzamiento')
+      else if (maquina.requiere_preparacion) setStep('preparacion')
+      // Si no requiere ni preparación ni lanzamiento, no hay paso anterior
     } else if (step === 'lanzamiento') {
       setTecnicoLanz(null)
-      setStep('preparacion')
+      if (maquina.requiere_preparacion) setStep('preparacion')
     }
   }
 
@@ -128,10 +131,11 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
           </div>
         )}
 
-        {/* Progreso en pasos (solo en flujo de uso normal) */}
-        {step !== 'averia' && (
+        {/* Progreso en pasos (solo en flujo de uso normal, y solo si hay más de 1 paso) */}
+        {step !== 'averia' && (maquina.requiere_preparacion || maquina.requiere_lanzamiento) && (
           <StepIndicator
             current={step as 'preparacion' | 'lanzamiento' | 'confirmar'}
+            requierePreparacion={maquina.requiere_preparacion}
             requiereLanzamiento={maquina.requiere_lanzamiento}
           />
         )}
@@ -195,14 +199,16 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
           </StepContent>
         )}
 
-        {/* Paso 3: Confirmar */}
-        {step === 'confirmar' && tecnicoPrep && (
+        {/* Paso Confirmar / Producción directa */}
+        {step === 'confirmar' && (
           <StepContent
-            title="¿Empezamos?"
-            subtitle="Revisa que todo esté bien y pulsa el botón."
+            title={maquina.requiere_preparacion ? '¿Empezamos?' : `Iniciar ${maquina.codigo}`}
+            subtitle={maquina.requiere_preparacion ? 'Revisa que todo esté bien y pulsa el botón.' : 'Pulsa para poner la máquina en marcha.'}
           >
             <div className="bg-surface-3 border border-border-subtle rounded-xl p-4 space-y-3">
-              <SummaryRow icon="🛠️" label="Prepara" trabajador={tecnicoPrep} />
+              {tecnicoPrep && (
+                <SummaryRow icon="🛠️" label="Prepara" trabajador={tecnicoPrep} />
+              )}
               {maquina.requiere_lanzamiento && tecnicoLanz && (
                 <SummaryRow icon="▶" label="Lanza" trabajador={tecnicoLanz} />
               )}
@@ -262,8 +268,8 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
           </StepContent>
         )}
 
-        {/* Navegación inferior */}
-        {step !== 'preparacion' && step !== 'averia' && (
+        {/* Navegación inferior (solo si hay un paso anterior al que volver) */}
+        {step !== 'averia' && (step === 'lanzamiento' || (step === 'confirmar' && (maquina.requiere_preparacion || maquina.requiere_lanzamiento))) && (
           <div className="mt-5 pt-4 border-t border-border-subtle flex items-center justify-between">
             <button
               onClick={handleBack}
@@ -290,10 +296,12 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
 
 type FlowStep = 'preparacion' | 'lanzamiento' | 'confirmar'
 
-function StepIndicator({ current, requiereLanzamiento }: { current: FlowStep; requiereLanzamiento: boolean }) {
-  const steps: FlowStep[] = requiereLanzamiento
-    ? ['preparacion', 'lanzamiento', 'confirmar']
-    : ['preparacion', 'confirmar']
+function StepIndicator({ current, requierePreparacion, requiereLanzamiento }: { current: FlowStep; requierePreparacion: boolean; requiereLanzamiento: boolean }) {
+  const steps: FlowStep[] = [
+    ...(requierePreparacion ? ['preparacion' as FlowStep] : []),
+    ...(requiereLanzamiento ? ['lanzamiento' as FlowStep] : []),
+    'confirmar',
+  ]
   const currentIdx = steps.indexOf(current)
 
   return (

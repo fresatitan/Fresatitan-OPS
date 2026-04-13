@@ -27,6 +27,7 @@ export interface Maquina {
   descripcion: string | null
   ubicacion: string | null
   estado_actual: EstadoMaquina
+  requiere_preparacion: boolean     // true = pide "¿quién prepara?" antes de producción
   requiere_lanzamiento: boolean     // catalán "punxat" → lanzamiento del programa
   activa: boolean                   // false = retirada del servicio
   created_at: string
@@ -48,7 +49,7 @@ export interface UsoEquipo {
   maquina_id: string
   fecha: string                            // ISO date (YYYY-MM-DD)
   hora_preparacion: string                 // HH:mm
-  tecnico_preparacion_id: string
+  tecnico_preparacion_id: string | null
   tecnico_lanzamiento_id: string | null    // solo si maquina.requiere_lanzamiento
   hora_acabado: string | null              // HH:mm, null mientras en curso
   tecnico_acabado_id: string | null
