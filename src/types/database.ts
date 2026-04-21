@@ -2,7 +2,7 @@
 
 export type EstadoMaquina = 'activa' | 'parada' | 'avería' | 'mantenimiento' | 'inactiva'
 export type RolUsuario = 'operario' | 'supervisor' | 'tecnico' | 'admin'
-export type TipoMaquina = 'fresadora' | 'sinterizadora'
+export type TipoMaquina = 'fresadora' | 'sinterizadora' | 'impresora_3d'
 export type ResultadoUso = 'ok' | 'ko' | 'pendiente'
 export type TipoMantenimiento = 'preventivo' | 'correctivo' | 'predictivo'
 

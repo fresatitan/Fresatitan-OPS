@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
 import { useWorkflowStore } from '../../store/workflowStore'
+import { TIPOS_MAQUINA } from '../../constants/estados'
 import type { Maquina, TipoMaquina } from '../../types/database'
 import toast from 'react-hot-toast'
 
@@ -90,8 +91,8 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
         </Field>
 
         <Field label="Tipo">
-          <div className="grid grid-cols-2 gap-2">
-            {(['fresadora', 'sinterizadora'] as TipoMaquina[]).map((t) => (
+          <div className="grid grid-cols-3 gap-2">
+            {(['fresadora', 'sinterizadora', 'impresora_3d'] as TipoMaquina[]).map((t) => (
               <button
                 key={t}
                 onClick={() => handleTipoChange(t)}
@@ -103,7 +104,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
                   }
                 `}
               >
-                {t === 'fresadora' ? 'Fresadora' : 'Sinterizadora'}
+                {TIPOS_MAQUINA[t]}
               </button>
             ))}
           </div>

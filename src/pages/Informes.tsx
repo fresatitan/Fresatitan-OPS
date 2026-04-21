@@ -49,6 +49,10 @@ export default function Informes() {
     () => maquinasOrdenadas.filter((m) => m.tipo === 'sinterizadora'),
     [maquinasOrdenadas]
   )
+  const impresoras3d = useMemo(
+    () => maquinasOrdenadas.filter((m) => m.tipo === 'impresora_3d'),
+    [maquinasOrdenadas]
+  )
 
   // Selected machine object (null when "todas")
   const selectedMaquina = useMemo(
@@ -362,6 +366,15 @@ export default function Informes() {
                 {sinterizadoras.length > 0 && (
                   <optgroup label="Sinterizadoras">
                     {sinterizadoras.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.codigo} · {m.nombre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {impresoras3d.length > 0 && (
+                  <optgroup label="Impresoras 3D">
+                    {impresoras3d.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.codigo} · {m.nombre}
                       </option>

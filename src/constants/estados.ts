@@ -18,6 +18,14 @@ export const ROLES: Record<RolUsuario, string> = {
 export const TIPOS_MAQUINA: Record<TipoMaquina, string> = {
   fresadora: 'Fresadora',
   sinterizadora: 'Sinterizadora',
+  impresora_3d: 'Impresora 3D',
+}
+
+// Plural para cabeceras de grupo (Panel, Informes, etc.)
+export const TIPOS_MAQUINA_PLURAL: Record<TipoMaquina, string> = {
+  fresadora: 'Fresadoras',
+  sinterizadora: 'Sinterizadoras',
+  impresora_3d: 'Impresoras 3D',
 }
 
 export const RESULTADOS_USO: Record<ResultadoUso, { label: string; color: string }> = {

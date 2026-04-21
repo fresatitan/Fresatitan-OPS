@@ -1,6 +1,18 @@
 import { jsPDF } from 'jspdf'
-import type { UsoEquipo, Maquina, Incidencia, Mantenimiento } from '../types/database'
+import type { UsoEquipo, Maquina, Incidencia, Mantenimiento, TipoMaquina } from '../types/database'
 import { formatTime } from './utils'
+
+const TIPO_LABEL_UPPER: Record<TipoMaquina, string> = {
+  fresadora: 'FRESADORA',
+  sinterizadora: 'SINTERIZADORA',
+  impresora_3d: 'IMPRESORA 3D',
+}
+
+const TIPO_LABEL: Record<TipoMaquina, string> = {
+  fresadora: 'Fresadora',
+  sinterizadora: 'Sinterizadora',
+  impresora_3d: 'Impresora 3D',
+}
 
 // =============================================================================
 // FRESATITAN OPS — Exportación PDF
@@ -70,7 +82,7 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, mantenim
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
     doc.setTextColor(120)
-    const tipoLabel = maquina.tipo === 'sinterizadora' ? 'SINTERIZADORA' : 'FRESADORA'
+    const tipoLabel = TIPO_LABEL_UPPER[maquina.tipo]
     const prepLabel = maquina.requiere_preparacion ? 'Con preparación' : 'Sin preparación'
     const lanzLabel = maquina.requiere_lanzamiento ? ' · Con lanzamiento' : ''
     doc.text(
@@ -216,7 +228,7 @@ export function exportPdfResumenEjecutivo({ maquinas, usos, incidencias, manteni
   if (selectedMaquina) {
     doc.setFontSize(8)
     doc.setTextColor(150)
-    const tipoLabel = selectedMaquina.tipo === 'sinterizadora' ? 'Sinterizadora' : 'Fresadora'
+    const tipoLabel = TIPO_LABEL[selectedMaquina.tipo]
     const prepLabel = selectedMaquina.requiere_preparacion ? ' · Con preparación' : ' · Sin preparación'
     doc.text(`${tipoLabel}${prepLabel}`, pageWidth / 2, 43, { align: 'center' })
   }
