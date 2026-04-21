@@ -177,6 +177,8 @@ function FamilySelector({
           ).length
           const empty = ofFamily.length === 0
 
+          const hasProblemas = problemas > 0
+
           return (
             <button
               key={f.tipo}
@@ -187,10 +189,25 @@ function FamilySelector({
                 flex flex-col
                 ${empty
                   ? 'bg-surface-2 border-border-subtle opacity-40 cursor-not-allowed'
-                  : 'bg-surface-2 border-border-subtle hover:border-primary hover:bg-surface-3 active:scale-[0.98]'
+                  : hasProblemas
+                    ? 'bg-surface-2 border-averia/40 hover:border-averia hover:bg-surface-3 active:scale-[0.98]'
+                    : 'bg-surface-2 border-border-subtle hover:border-primary hover:bg-surface-3 active:scale-[0.98]'
                 }
               `}
             >
+              {/* Aviso visual si hay problemas — esquina superior derecha */}
+              {hasProblemas && (
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-averia text-white">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+                  </span>
+                  <span className="text-[10px] font-mono font-bold tracking-wider">
+                    {problemas} AVERÍA{problemas === 1 ? '' : 'S'}
+                  </span>
+                </div>
+              )}
+
               <div className="text-4xl text-primary mb-3">{f.icon}</div>
               <h3 className="text-2xl font-bold text-text-primary leading-tight">
                 {TIPOS_MAQUINA_PLURAL[f.tipo]}
@@ -315,12 +332,18 @@ function PlantMaquinaCard({
   activeUso: UsoEquipo | null
   onClick?: () => void
 }) {
-  const disabled = maquina.estado_actual === 'avería' || maquina.estado_actual === 'mantenimiento' || maquina.estado_actual === 'inactiva'
-
   const isAvailable = maquina.estado_actual === 'parada'
   const isInUse     = maquina.estado_actual === 'activa'
   const isAveria    = maquina.estado_actual === 'avería'
   const isMant      = maquina.estado_actual === 'mantenimiento'
+  const isInactiva  = maquina.estado_actual === 'inactiva'
+
+  // Estados "bloqueados" (no usable) → render totalmente distinto y dominante
+  if (isAveria || isMant || isInactiva) {
+    return <BlockedMaquinaCard maquina={maquina} />
+  }
+
+  const disabled = false  // solo llegamos aquí si está operativa
 
   return (
     <button
@@ -331,8 +354,6 @@ function PlantMaquinaCard({
         flex flex-col
         ${isAvailable ? 'bg-surface-2 border-border-subtle hover:border-primary hover:bg-surface-3 active:scale-[0.98]' : ''}
         ${isInUse    ? 'bg-activa/10 border-activa/40 hover:bg-activa/15 active:scale-[0.98]' : ''}
-        ${isAveria   ? 'bg-averia/5 border-averia/30 cursor-not-allowed' : ''}
-        ${isMant     ? 'bg-mantenimiento/5 border-mantenimiento/30 cursor-not-allowed' : ''}
       `}
     >
       {/* Header */}
@@ -367,18 +388,125 @@ function PlantMaquinaCard({
       )}
 
       {isInUse && activeUso && <ActiveUsoFooter uso={activeUso} />}
-
-      {isAveria && (
-        <div className="mt-4 pt-3 border-t border-averia/20">
-          <span className="text-sm font-semibold text-averia">⚠ Máquina en avería</span>
-        </div>
-      )}
-      {isMant && (
-        <div className="mt-4 pt-3 border-t border-mantenimiento/20">
-          <span className="text-sm font-semibold text-mantenimiento">⚙ En mantenimiento</span>
-        </div>
-      )}
     </button>
+  )
+}
+
+/**
+ * Card para estados bloqueados (avería / mantenimiento / inactiva).
+ * Diseño completamente distinto al de máquinas operativas: el estado es lo
+ * primero que ve el trabajador, imposible confundirlo con una máquina libre.
+ */
+function BlockedMaquinaCard({ maquina }: { maquina: Maquina }) {
+  const isAveria   = maquina.estado_actual === 'avería'
+  const isMant     = maquina.estado_actual === 'mantenimiento'
+  const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
+
+  // Buscar la última avería abierta para mostrar motivo y severidad
+  const averiaAbierta = isAveria
+    ? estadosHistorial.find(
+        (e) => e.maquina_id === maquina.id && e.estado === 'avería' && !e.cerrada_en,
+      )
+    : null
+
+  const palette = isAveria
+    ? {
+        bg: 'bg-averia/10',
+        border: 'border-averia',
+        accent: 'text-averia',
+        banner: 'bg-averia',
+        dotPulse: true,
+      }
+    : isMant
+    ? {
+        bg: 'bg-mantenimiento/10',
+        border: 'border-mantenimiento',
+        accent: 'text-mantenimiento',
+        banner: 'bg-mantenimiento',
+        dotPulse: false,
+      }
+    : {
+        bg: 'bg-surface-2',
+        border: 'border-border-subtle',
+        accent: 'text-text-tertiary',
+        banner: 'bg-surface-4',
+        dotPulse: false,
+      }
+
+  const mainLabel = isAveria ? 'NO USAR' : isMant ? 'NO DISPONIBLE' : 'RETIRADA'
+  const subLabel = isAveria
+    ? 'Máquina averiada — avisa al responsable'
+    : isMant
+    ? 'En mantenimiento'
+    : 'Máquina retirada del servicio'
+
+  return (
+    <div
+      className={`
+        relative rounded-2xl border-2 p-5 text-left w-full min-h-[180px] flex flex-col
+        cursor-not-allowed
+        ${palette.bg} ${palette.border}
+        ${isAveria ? 'animate-averia' : ''}
+      `}
+    >
+      {/* Banner superior de ancho completo */}
+      <div
+        className={`
+          ${palette.banner} text-white -mx-5 -mt-5 mb-4 rounded-t-2xl
+          px-4 py-2.5 flex items-center gap-2
+        `}
+      >
+        {palette.dotPulse && (
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white" />
+          </span>
+        )}
+        <span className="text-[11px] font-mono font-bold tracking-widest uppercase">
+          {isAveria ? '⚠ Avería' : isMant ? '⚙ Mantenimiento' : '· Inactiva'}
+        </span>
+      </div>
+
+      {/* Header: código + nombre */}
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="font-mono text-xs text-text-tertiary font-bold">{maquina.codigo}</span>
+          <span className="text-[10px] text-text-tertiary uppercase tracking-wider">
+            {TIPOS_MAQUINA[maquina.tipo]}
+          </span>
+        </div>
+        <h3 className="text-base font-bold text-text-primary leading-tight">{maquina.nombre}</h3>
+      </div>
+
+      {/* Mensaje principal grande — lo PRIMERO que el trabajador ve */}
+      <div className="flex-1 flex flex-col items-center justify-center text-center py-2">
+        <div className={`text-3xl font-black ${palette.accent} tracking-tight leading-none`}>
+          {mainLabel}
+        </div>
+        <div className={`text-xs ${palette.accent} mt-2 opacity-80 font-medium`}>
+          {subLabel}
+        </div>
+      </div>
+
+      {/* Motivo de la avería, si está disponible */}
+      {isAveria && averiaAbierta?.motivo && (
+        <div className="mt-3 pt-3 border-t border-averia/20">
+          <div className="text-[9px] text-averia uppercase tracking-widest font-bold mb-1">
+            Motivo reportado
+          </div>
+          <p className="text-xs text-text-primary leading-relaxed line-clamp-3">
+            {averiaAbierta.motivo}
+          </p>
+          {averiaAbierta.severidad_confirmada_por_admin && averiaAbierta.severidad && (
+            <div className="mt-2">
+              <span className="text-[10px] font-mono uppercase tracking-widest bg-averia/20 text-averia px-1.5 py-0.5 rounded">
+                {averiaAbierta.severidad === 'critica' ? '🔴 Crítica' : '🟡 Leve'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
