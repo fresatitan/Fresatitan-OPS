@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { path: '/maquinas', label: 'Máq.', icon: '⚙' },
   { path: '/trabajadores', label: 'Equipo', icon: '⊡' },
   { path: '/alertas', label: 'Alert.', icon: '▲' },
+  { path: '/auditoria', label: 'Audit.', icon: '📋' },
 ]
 
 export default function MobileNav() {

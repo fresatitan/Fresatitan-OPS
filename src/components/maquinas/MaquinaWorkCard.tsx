@@ -10,9 +10,13 @@ import type { Maquina } from '../../types/database'
 
 interface Props {
   maquina: Maquina
+  /** Si se pasa, se muestra un botón 📋 que llama a este callback para abrir el historial. */
+  onHistorial?: () => void
+  /** Si se pasa, se muestra un botón de editar la máquina. */
+  onEdit?: () => void
 }
 
-export default function MaquinaWorkCard({ maquina }: Props) {
+export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props) {
   const usos = useWorkflowStore((s) => s.usos)
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
 
@@ -101,6 +105,39 @@ export default function MaquinaWorkCard({ maquina }: Props) {
                 Cerrar uso
               </button>
             )}
+
+            {onHistorial && (
+              <button
+                onClick={onHistorial}
+                title="Ver historial de averías"
+                aria-label="Ver historial de averías"
+                className="
+                  shrink-0 px-2.5 py-2 rounded text-xs font-medium
+                  bg-surface-3 border border-border-subtle text-text-secondary
+                  hover:bg-surface-4 hover:text-primary hover:border-primary/40
+                  transition-colors flex items-center gap-1.5
+                "
+              >
+                <HistoryIcon />
+                <span className="hidden sm:inline">Historial</span>
+              </button>
+            )}
+
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                title="Editar máquina"
+                aria-label="Editar máquina"
+                className="
+                  shrink-0 px-2.5 py-2 rounded text-xs font-medium
+                  bg-surface-3 border border-border-subtle text-text-secondary
+                  hover:bg-surface-4 hover:text-text-primary
+                  transition-colors
+                "
+              >
+                <EditIcon />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -157,6 +194,23 @@ function ActiveUsoBar({
         </button>
       </div>
     </div>
+  )
+}
+
+function HistoryIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="6.5" />
+      <polyline points="8,4 8,8 10.5,9.5" />
+    </svg>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 2l3 3-8 8H3v-3l8-8z" />
+    </svg>
   )
 }
 

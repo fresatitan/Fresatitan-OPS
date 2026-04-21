@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { path: '/maquinas', label: 'Máquinas', icon: CpuIcon },
   { path: '/trabajadores', label: 'Trabajadores', icon: UsersIcon },
   { path: '/alertas', label: 'Alertas', icon: BellIcon },
+  { path: '/auditoria', label: 'Auditoría', icon: ClipboardIcon },
   { path: '/informes', label: 'Informes', icon: ChartIcon },
 ]
 
@@ -167,6 +168,19 @@ function ChartIcon({ size = 16, active }: { size?: number; active?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke={active ? '#D09A40' : 'currentColor'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="4" y1="14" x2="4" y2="8" /><line x1="8" y1="14" x2="8" y2="4" /><line x1="12" y1="14" x2="12" y2="6" />
+    </svg>
+  )
+}
+
+function ClipboardIcon({ size = 16, active }: { size?: number; active?: boolean }) {
+  const color = active ? '#D09A40' : 'currentColor'
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="2.5" width="9" height="12" rx="1" />
+      <rect x="6" y="1" width="4" height="2.5" rx="0.5" />
+      <line x1="5.5" y1="7" x2="10.5" y2="7" />
+      <line x1="5.5" y1="10" x2="10.5" y2="10" />
+      <line x1="5.5" y1="12.5" x2="8.5" y2="12.5" />
     </svg>
   )
 }

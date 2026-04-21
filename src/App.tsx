@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Maquinas from './pages/Maquinas'
 import Trabajadores from './pages/Trabajadores'
 import Alertas from './pages/Alertas'
+import Auditoria from './pages/Auditoria'
 import Informes from './pages/Informes'
 import Panel from './pages/Panel'
 import Login from './pages/Login'
@@ -58,6 +59,7 @@ export default function App() {
             <Route path="/maquinas" element={<RequireAuth><Maquinas /></RequireAuth>} />
             <Route path="/trabajadores" element={<RequireAuth><Trabajadores /></RequireAuth>} />
             <Route path="/alertas" element={<RequireAuth><Alertas /></RequireAuth>} />
+            <Route path="/auditoria" element={<RequireAuth><Auditoria /></RequireAuth>} />
             <Route path="/informes" element={<RequireAuth><Informes /></RequireAuth>} />
           </>
         )}

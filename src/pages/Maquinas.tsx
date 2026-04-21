@@ -110,30 +110,12 @@ export default function Maquinas() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {filtered.map((m) => (
-                <div key={m.id} className="relative group">
-                  <MaquinaWorkCard maquina={m} />
-                  <div className="absolute top-2.5 right-12 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <button
-                      onClick={() => setHistorialFor(m)}
-                      className="bg-surface-3 border border-border-default rounded p-1 text-text-tertiary hover:text-primary"
-                      title="Historial de averías"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="8" cy="8" r="6.5" />
-                        <polyline points="8,4 8,8 10.5,9.5" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => setEditTarget(m)}
-                      className="bg-surface-3 border border-border-default rounded p-1 text-text-tertiary hover:text-text-primary"
-                      title="Editar máquina"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 2l3 3-8 8H3v-3l8-8z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+                <MaquinaWorkCard
+                  key={m.id}
+                  maquina={m}
+                  onHistorial={() => setHistorialFor(m)}
+                  onEdit={() => setEditTarget(m)}
+                />
               ))}
             </div>
 
