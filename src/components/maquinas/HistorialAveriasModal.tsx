@@ -296,28 +296,30 @@ function AveriaHistorialCard({
         <div className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1.5">
           Documentos {documentos.length > 0 && `(${documentos.length})`}
         </div>
-        <div className="flex flex-wrap gap-1.5 items-center">
-          {documentos.map((doc) => (
-            <DocumentoChip key={doc.id} documento={doc} />
-          ))}
-          <button
-            onClick={onSubirDocumento}
-            className="
-              inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded
-              bg-primary-muted border border-primary/30 text-primary text-xs font-medium
-              hover:bg-primary/20 transition-colors
-            "
-          >
-            <span>📎</span>
-            <span>{documentos.length === 0 ? 'Subir parte técnico / documento' : 'Añadir otro'}</span>
-          </button>
-        </div>
+        {documentos.length > 0 && (
+          <ul className="space-y-1.5 mb-2">
+            {documentos.map((doc) => (
+              <DocumentoItem key={doc.id} documento={doc} />
+            ))}
+          </ul>
+        )}
+        <button
+          onClick={onSubirDocumento}
+          className="
+            inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded
+            bg-primary-muted border border-primary/30 text-primary text-xs font-medium
+            hover:bg-primary/20 transition-colors
+          "
+        >
+          <span>📎</span>
+          <span>{documentos.length === 0 ? 'Subir parte técnico / documento' : 'Añadir otro'}</span>
+        </button>
       </div>
     </div>
   )
 }
 
-function DocumentoChip({ documento }: { documento: AveriaDocumento }) {
+function DocumentoItem({ documento }: { documento: AveriaDocumento }) {
   const [loading, setLoading] = useState(false)
 
   const handleOpen = async () => {
@@ -337,20 +339,42 @@ function DocumentoChip({ documento }: { documento: AveriaDocumento }) {
     ? '🖼'
     : '📎'
 
+  const subidoDate = new Date(documento.subido_en)
+  const fechaFormateada = subidoDate.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+  const horaFormateada = subidoDate.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
   return (
-    <button
-      onClick={handleOpen}
-      disabled={loading}
-      className="
-        inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded
-        bg-surface-3 border border-border-subtle text-text-primary text-xs
-        hover:bg-surface-4 hover:border-primary/30 transition-colors
-        disabled:opacity-50
-      "
-    >
-      <span>{icon}</span>
-      <span className="max-w-[180px] truncate">{documento.nombre_original}</span>
-      <span className="text-text-tertiary">↗</span>
-    </button>
+    <li>
+      <button
+        onClick={handleOpen}
+        disabled={loading}
+        className="
+          w-full flex items-center gap-3 px-3 py-2 rounded
+          bg-surface-3 border border-border-subtle text-left
+          hover:bg-surface-4 hover:border-primary/30 transition-colors
+          disabled:opacity-50
+        "
+      >
+        <span className="text-xl shrink-0">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-medium text-text-primary truncate">
+            {documento.nombre_original}
+          </div>
+          <div className="text-[10px] text-text-tertiary font-mono mt-0.5">
+            Subido el {fechaFormateada} · {horaFormateada}
+          </div>
+        </div>
+        <span className="text-[10px] font-mono text-primary shrink-0 uppercase tracking-wider">
+          Ver ↗
+        </span>
+      </button>
+    </li>
   )
 }

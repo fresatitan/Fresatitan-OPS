@@ -664,8 +664,10 @@ export function exportHistorialAveriasPdf({
       doc.setTextColor(80)
       for (const d of docs) {
         if (y > pageHeight - 12) { doc.addPage(); y = 20 }
-        const fechaSubida = new Date(d.subido_en).toLocaleDateString('es-ES')
-        doc.text(`• ${d.nombre_original}  (${fechaSubida})`, marginX + 3, y)
+        const subidaDate = new Date(d.subido_en)
+        const fechaSubida = subidaDate.toLocaleDateString('es-ES')
+        const horaSubida = subidaDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+        doc.text(`• ${d.nombre_original}  (subido ${fechaSubida} · ${horaSubida})`, marginX + 3, y)
         y += 4
       }
     }
