@@ -3,6 +3,7 @@ import Layout from '../components/ui/Layout'
 import TopBar from '../components/ui/TopBar'
 import TrabajadorAvatar from '../components/ui/TrabajadorAvatar'
 import ResolverAveriaModal from '../components/maquinas/ResolverAveriaModal'
+import SubirDocumentoModal from '../components/maquinas/SubirDocumentoModal'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useTrabajadoresStore } from '../store/trabajadoresStore'
 import { useAuthStore } from '../store/authStore'
@@ -32,6 +33,7 @@ export default function Alertas() {
   const trabajadores = useTrabajadoresStore((s) => s.trabajadores)
 
   const [resolverPara, setResolverPara] = useState<Maquina | null>(null)
+  const [subirFor, setSubirFor] = useState<{ maquina: Maquina; averia: MaquinaEstado } | null>(null)
 
   // Averías abiertas = filas del historial con estado='avería' y cerrada_en = null
   // Puede haber varias por máquina (edge case); nos quedamos con la más reciente
@@ -123,6 +125,7 @@ export default function Alertas() {
                     reportadoPor={getReporter(evento.usuario_id)}
                     getName={getName}
                     onResolver={() => setResolverPara(maquina)}
+                    onSubirDocumento={() => setSubirFor({ maquina, averia: evento })}
                   />
                 )
               })}
@@ -154,6 +157,7 @@ export default function Alertas() {
                     reportadoPor={getReporter(evento.usuario_id)}
                     getName={getName}
                     onResolver={() => setResolverPara(maquina)}
+                    onSubirDocumento={() => setSubirFor({ maquina, averia: evento })}
                   />
                 )
               })}
@@ -184,6 +188,7 @@ export default function Alertas() {
                     reportadoPor={getReporter(evento.usuario_id)}
                     getName={getName}
                     onResolver={() => setResolverPara(maquina)}
+                    onSubirDocumento={() => setSubirFor({ maquina, averia: evento })}
                   />
                 )
               })}
@@ -226,6 +231,16 @@ export default function Alertas() {
           open={!!resolverPara}
           onClose={() => setResolverPara(null)}
           maquina={resolverPara}
+        />
+      )}
+
+      {/* Modal de subida de documentos — para añadir partes a una avería abierta */}
+      {subirFor && (
+        <SubirDocumentoModal
+          open={!!subirFor}
+          onClose={() => setSubirFor(null)}
+          maquina={subirFor.maquina}
+          averia={subirFor.averia}
         />
       )}
     </Layout>
@@ -284,6 +299,7 @@ function AveriaCard({
   reportadoPor,
   getName,
   onResolver,
+  onSubirDocumento,
 }: {
   variant: AveriaVariant
   evento: MaquinaEstado
@@ -291,9 +307,12 @@ function AveriaCard({
   reportadoPor: { id: string; nombre: string; apellidos: string } | null
   getName: (id: string | null) => string
   onResolver: () => void
+  onSubirDocumento: () => void
 }) {
   const confirmarSeveridad = useWorkflowStore((s) => s.confirmarSeveridadAveria)
+  const getDocumentosByAveria = useWorkflowStore((s) => s.getDocumentosByAveria)
   const adminUser = useAuthStore((s) => s.user)
+  const docs = getDocumentosByAveria(evento.id)
 
   const fechaReporte = new Date(evento.timestamp).toLocaleString('es-ES', {
     day: '2-digit',
@@ -362,6 +381,26 @@ function AveriaCard({
           </span>
         </div>
       )}
+
+      {/* Documentos adjuntos y botón de subida */}
+      <div className="mt-3 flex items-center justify-between gap-2 pb-3 border-b border-border-subtle">
+        <span className="text-[11px] text-text-tertiary">
+          {docs.length === 0
+            ? 'Sin documentos adjuntos'
+            : `${docs.length} documento${docs.length === 1 ? '' : 's'} adjunto${docs.length === 1 ? '' : 's'}`}
+        </span>
+        <button
+          onClick={onSubirDocumento}
+          className="
+            inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded
+            bg-primary-muted border border-primary/30 text-primary text-xs font-medium
+            hover:bg-primary/20 transition-colors
+          "
+        >
+          <span>📎</span>
+          <span>Subir parte técnico</span>
+        </button>
+      </div>
 
       {/* Acciones */}
       <div className="mt-3 grid gap-2">

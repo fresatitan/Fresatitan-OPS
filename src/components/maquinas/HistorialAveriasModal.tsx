@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import Modal from '../ui/Modal'
+import SubirDocumentoModal from './SubirDocumentoModal'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore } from '../../store/trabajadoresStore'
 import { getSignedUrl } from '../../lib/averiaDocumentos'
@@ -36,6 +37,7 @@ export default function HistorialAveriasModal({ open, onClose, maquina }: Props)
 
   const [filter, setFilter] = useState<Filter>('todas')
   const [exporting, setExporting] = useState(false)
+  const [subirFor, setSubirFor] = useState<MaquinaEstado | null>(null)
 
   const averias = useMemo(() => getAveriasByMaquina(maquina.id), [getAveriasByMaquina, maquina.id])
 
@@ -133,11 +135,21 @@ export default function HistorialAveriasModal({ open, onClose, maquina }: Props)
                 averia={averia}
                 documentos={getDocumentosByAveria(averia.id)}
                 getName={getName}
+                onSubirDocumento={() => setSubirFor(averia)}
               />
             ))}
           </div>
         )}
       </div>
+
+      {subirFor && (
+        <SubirDocumentoModal
+          open={!!subirFor}
+          onClose={() => setSubirFor(null)}
+          maquina={maquina}
+          averia={subirFor}
+        />
+      )}
     </Modal>
   )
 }
@@ -168,10 +180,12 @@ function AveriaHistorialCard({
   averia,
   documentos,
   getName,
+  onSubirDocumento,
 }: {
   averia: MaquinaEstado
   documentos: AveriaDocumento[]
   getName: (id: string | null) => string
+  onSubirDocumento: () => void
 }) {
   const abierta = !averia.cerrada_en
   const severidadTone = averia.severidad === 'critica' ? 'averia' : 'parada'
@@ -278,18 +292,27 @@ function AveriaHistorialCard({
       )}
 
       {/* Documentos */}
-      {documentos.length > 0 && (
-        <div>
-          <div className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1.5">
-            Documentos ({documentos.length})
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {documentos.map((doc) => (
-              <DocumentoChip key={doc.id} documento={doc} />
-            ))}
-          </div>
+      <div>
+        <div className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1.5">
+          Documentos {documentos.length > 0 && `(${documentos.length})`}
         </div>
-      )}
+        <div className="flex flex-wrap gap-1.5 items-center">
+          {documentos.map((doc) => (
+            <DocumentoChip key={doc.id} documento={doc} />
+          ))}
+          <button
+            onClick={onSubirDocumento}
+            className="
+              inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded
+              bg-primary-muted border border-primary/30 text-primary text-xs font-medium
+              hover:bg-primary/20 transition-colors
+            "
+          >
+            <span>📎</span>
+            <span>{documentos.length === 0 ? 'Subir parte técnico / documento' : 'Añadir otro'}</span>
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
