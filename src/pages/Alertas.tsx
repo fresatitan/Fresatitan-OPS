@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Layout from '../components/ui/Layout'
 import TopBar from '../components/ui/TopBar'
 import TrabajadorAvatar from '../components/ui/TrabajadorAvatar'
+import ResolverAveriaModal from '../components/maquinas/ResolverAveriaModal'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useTrabajadoresStore } from '../store/trabajadoresStore'
 import { useAuthStore } from '../store/authStore'
@@ -29,6 +30,8 @@ export default function Alertas() {
   const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
   const trabajadores = useTrabajadoresStore((s) => s.trabajadores)
+
+  const [resolverPara, setResolverPara] = useState<Maquina | null>(null)
 
   // Averías abiertas = filas del historial con estado='avería' y cerrada_en = null
   // Puede haber varias por máquina (edge case); nos quedamos con la más reciente
@@ -119,6 +122,7 @@ export default function Alertas() {
                     maquina={maquina}
                     reportadoPor={getReporter(evento.usuario_id)}
                     getName={getName}
+                    onResolver={() => setResolverPara(maquina)}
                   />
                 )
               })}
@@ -149,6 +153,7 @@ export default function Alertas() {
                     maquina={maquina}
                     reportadoPor={getReporter(evento.usuario_id)}
                     getName={getName}
+                    onResolver={() => setResolverPara(maquina)}
                   />
                 )
               })}
@@ -178,6 +183,7 @@ export default function Alertas() {
                     maquina={maquina}
                     reportadoPor={getReporter(evento.usuario_id)}
                     getName={getName}
+                    onResolver={() => setResolverPara(maquina)}
                   />
                 )
               })}
@@ -213,6 +219,15 @@ export default function Alertas() {
           )}
         </section>
       </main>
+
+      {/* Modal de resolución — abre cuando se pulsa "Marcar como resuelta" en cualquier card */}
+      {resolverPara && (
+        <ResolverAveriaModal
+          open={!!resolverPara}
+          onClose={() => setResolverPara(null)}
+          maquina={resolverPara}
+        />
+      )}
     </Layout>
   )
 }
@@ -268,14 +283,15 @@ function AveriaCard({
   maquina,
   reportadoPor,
   getName,
+  onResolver,
 }: {
   variant: AveriaVariant
   evento: MaquinaEstado
   maquina: Maquina
   reportadoPor: { id: string; nombre: string; apellidos: string } | null
   getName: (id: string | null) => string
+  onResolver: () => void
 }) {
-  const updateEstadoMaquina = useWorkflowStore((s) => s.updateEstadoMaquina)
   const confirmarSeveridad = useWorkflowStore((s) => s.confirmarSeveridadAveria)
   const adminUser = useAuthStore((s) => s.user)
 
@@ -297,12 +313,6 @@ function AveriaCard({
 
   const handleConfirmar = async (severidad: SeveridadAveria) => {
     await confirmarSeveridad(evento.id, severidad, adminUser?.id ?? null)
-  }
-
-  const handleResolver = async () => {
-    if (confirm(`¿Marcar ${maquina.codigo} como operativa y cerrar la alerta?`)) {
-      await updateEstadoMaquina(maquina.id, 'parada')
-    }
   }
 
   return (
@@ -388,10 +398,10 @@ function AveriaCard({
           </button>
         )}
         <button
-          onClick={handleResolver}
+          onClick={onResolver}
           className="px-3 py-2 rounded text-xs font-medium bg-surface-3 border border-border-default text-text-secondary hover:bg-surface-4 hover:text-text-primary transition-colors"
         >
-          Marcar como resuelta
+          Marcar como resuelta…
         </button>
       </div>
     </div>

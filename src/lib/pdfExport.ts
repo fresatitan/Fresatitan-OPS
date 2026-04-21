@@ -1,5 +1,14 @@
 import { jsPDF } from 'jspdf'
-import type { UsoEquipo, Maquina, Incidencia, Mantenimiento, TipoMaquina } from '../types/database'
+import type {
+  UsoEquipo,
+  Maquina,
+  Incidencia,
+  Mantenimiento,
+  TipoMaquina,
+  MaquinaEstado,
+  AveriaDocumento,
+  SeveridadAveria,
+} from '../types/database'
 import { formatTime } from './utils'
 
 const TIPO_LABEL_UPPER: Record<TipoMaquina, string> = {
@@ -462,4 +471,231 @@ function buildColumnPositions(startX: number, totalWidth: number, numCols: numbe
     positions.push(startX + i * colWidth)
   }
   return positions
+}
+
+// =============================================================================
+// FORMATO C — Historial completo de averías por máquina (compliance sanitaria)
+// =============================================================================
+// Documento destinado a ser presentado en inspecciones. Recoge por cada avería:
+// fecha, severidad, motivo, medidas correctoras, técnico que intervino y lista
+// de documentos adjuntos (nombre — el PDF no incorpora los archivos en sí, pero
+// sí los nombres y fechas para trazabilidad).
+// =============================================================================
+
+export interface HistorialExportData {
+  maquina: Maquina
+  averias: MaquinaEstado[]                            // desc por timestamp
+  docsByAveria: Record<string, AveriaDocumento[]>     // maquina_estado_id → docs
+  getName: (id: string | null) => string
+}
+
+const SEV_PDF_LABEL: Record<SeveridadAveria, string> = {
+  critica: 'CRÍTICA',
+  leve: 'LEVE',
+}
+
+export function exportHistorialAveriasPdf({
+  maquina,
+  averias,
+  docsByAveria,
+  getName,
+}: HistorialExportData) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const marginX = 15
+  let y = 20
+
+  // Cabecera
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(16)
+  doc.setTextColor(33)
+  doc.text('Historial de averías', marginX, y)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(120)
+  doc.text(`Generado: ${new Date().toLocaleString('es-ES')}`, pageWidth - marginX, y, { align: 'right' })
+
+  y += 7
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(0)
+  doc.text(`${maquina.codigo} · ${maquina.nombre}`, marginX, y)
+
+  y += 5
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(100)
+  const tipoLabel = TIPO_LABEL_UPPER[maquina.tipo]
+  const parts = [tipoLabel]
+  if (maquina.numero_serie) parts.push(`S/N ${maquina.numero_serie}`)
+  if (maquina.ubicacion) parts.push(maquina.ubicacion)
+  doc.text(parts.join(' · '), marginX, y)
+
+  // Línea dorada separadora
+  y += 4
+  doc.setDrawColor(208, 154, 64)
+  doc.setLineWidth(0.4)
+  doc.line(marginX, y, pageWidth - marginX, y)
+  y += 6
+
+  // Resumen numérico
+  const totalDocs = Object.values(docsByAveria).reduce((acc, arr) => acc + arr.length, 0)
+  const abiertas = averias.filter((a) => !a.cerrada_en).length
+  const criticas = averias.filter((a) => a.severidad === 'critica').length
+  const leves = averias.filter((a) => a.severidad === 'leve').length
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(60)
+  const resumen = `${averias.length} avería${averias.length === 1 ? '' : 's'} · ${abiertas} abierta${abiertas === 1 ? '' : 's'} · ${criticas} crítica${criticas === 1 ? '' : 's'} · ${leves} leve${leves === 1 ? '' : 's'} · ${totalDocs} documento${totalDocs === 1 ? '' : 's'} adjunto${totalDocs === 1 ? '' : 's'}`
+  doc.text(resumen, marginX, y)
+  y += 8
+
+  if (averias.length === 0) {
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(10)
+    doc.setTextColor(130)
+    doc.text('Esta máquina no tiene averías registradas.', marginX, y)
+    const filename = `${maquina.codigo}_historial_averias.pdf`
+    doc.save(filename)
+    return filename
+  }
+
+  // Por cada avería, bloque resumen
+  for (const a of averias) {
+    // Verifica si queda sitio; si no, nueva página
+    if (y > pageHeight - 50) {
+      doc.addPage()
+      y = 20
+    }
+
+    const docs = docsByAveria[a.id] ?? []
+    const abierta = !a.cerrada_en
+    const sevLabel = a.severidad ? SEV_PDF_LABEL[a.severidad] : 'SIN CLASIFICAR'
+
+    // Bloque con fondo tenue
+    const blockStartY = y
+    doc.setFillColor(245, 245, 245)
+    doc.rect(marginX - 2, y - 4, pageWidth - 2 * (marginX - 2), 6, 'F')
+
+    // Header de la avería
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(33)
+    const fechaReporte = new Date(a.timestamp).toLocaleDateString('es-ES', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    })
+    doc.text(`${fechaReporte} · ${sevLabel} · ${abierta ? 'ABIERTA' : 'CERRADA'}`, marginX, y)
+
+    y += 6
+
+    // Reportada por
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(80)
+    doc.text(`Reportada por: ${getName(a.usuario_id)}`, marginX, y)
+    y += 5
+
+    // Motivo
+    if (a.motivo) {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(180, 50, 50)
+      doc.text('MOTIVO', marginX, y)
+      y += 4
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(40)
+      const motivoLines = doc.splitTextToSize(a.motivo, pageWidth - 2 * marginX)
+      doc.text(motivoLines, marginX, y)
+      y += motivoLines.length * 4 + 2
+    }
+
+    // Resolución
+    if (a.resolucion_descripcion) {
+      if (y > pageHeight - 35) { doc.addPage(); y = 20 }
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(50, 140, 50)
+      doc.text('MEDIDAS CORRECTORAS APLICADAS', marginX, y)
+      y += 4
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(40)
+      const resLines = doc.splitTextToSize(a.resolucion_descripcion, pageWidth - 2 * marginX)
+      doc.text(resLines, marginX, y)
+      y += resLines.length * 4 + 2
+
+      // Técnico + fecha intervención
+      const extras: string[] = []
+      if (a.tecnico_intervencion) extras.push(`Técnico: ${a.tecnico_intervencion}`)
+      if (a.fecha_intervencion) extras.push(`Intervención: ${a.fecha_intervencion}`)
+      if (a.cerrada_por) extras.push(`Cerrada por: ${getName(a.cerrada_por)}`)
+      if (a.cerrada_en) {
+        extras.push(`Fecha cierre: ${new Date(a.cerrada_en).toLocaleDateString('es-ES')}`)
+      }
+      if (extras.length > 0) {
+        doc.setFont('helvetica', 'italic')
+        doc.setFontSize(8)
+        doc.setTextColor(110)
+        doc.text(extras.join(' · '), marginX, y)
+        y += 4
+      }
+    } else if (abierta) {
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(9)
+      doc.setTextColor(170, 100, 0)
+      doc.text('Sin resolver — pendiente de actuación.', marginX, y)
+      y += 4
+    }
+
+    // Lista de documentos adjuntos (nombres)
+    if (docs.length > 0) {
+      if (y > pageHeight - 20) { doc.addPage(); y = 20 }
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(80, 80, 80)
+      doc.text(`DOCUMENTOS ADJUNTOS (${docs.length})`, marginX, y)
+      y += 4
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(80)
+      for (const d of docs) {
+        if (y > pageHeight - 12) { doc.addPage(); y = 20 }
+        const fechaSubida = new Date(d.subido_en).toLocaleDateString('es-ES')
+        doc.text(`• ${d.nombre_original}  (${fechaSubida})`, marginX + 3, y)
+        y += 4
+      }
+    }
+
+    // Separador entre averías
+    y += 3
+    doc.setDrawColor(220)
+    doc.setLineWidth(0.2)
+    doc.line(marginX, y, pageWidth - marginX, y)
+    y += 5
+
+    void blockStartY
+  }
+
+  // Footer en cada página
+  const totalPages = doc.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(140)
+    doc.text(
+      `Documento generado por FRESATITAN OPS — Pág. ${i} de ${totalPages}`,
+      pageWidth / 2,
+      pageHeight - 8,
+      { align: 'center' }
+    )
+  }
+
+  const filename = `${maquina.codigo}_historial_averias_${new Date().toISOString().slice(0, 10)}.pdf`
+  doc.save(filename)
+  return filename
 }

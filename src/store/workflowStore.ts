@@ -12,6 +12,7 @@ import type {
   ResultadoUso,
   TipoMaquina,
   SeveridadAveria,
+  AveriaDocumento,
 } from '../types/database'
 
 // =============================================================================
@@ -101,6 +102,7 @@ interface WorkflowState {
   incidencias: Incidencia[]
   mantenimientos: Mantenimiento[]
   estadosHistorial: MaquinaEstado[]
+  averiaDocumentos: AveriaDocumento[]
 
   loading: boolean
   error: string | null
@@ -125,6 +127,17 @@ interface WorkflowState {
   updateEstadoMaquina: (maquinaId: string, estado: EstadoMaquina) => Promise<void>
   reportarAveria: (maquinaId: string, motivo: string, usuarioId?: string | null, severidadPropuesta?: SeveridadAveria) => Promise<void>
   confirmarSeveridadAveria: (maquinaEstadoId: string, severidadFinal: SeveridadAveria, adminId?: string | null) => Promise<void>
+  /**
+   * Cierra la avería abierta de una máquina con los datos de resolución.
+   * Devuelve el id de maquina_estado cerrado (para vincular documentos después).
+   */
+  resolverAveria: (input: {
+    maquinaId: string
+    adminId?: string | null
+    resolucionDescripcion: string
+    tecnicoIntervencion?: string | null
+    fechaIntervencion?: string | null
+  }) => Promise<string | null>
 
   // Selectors
   getUsosByMaquina: (maquinaId: string) => UsoEquipo[]
@@ -133,6 +146,12 @@ interface WorkflowState {
   getIncidenciasByUso: (usoId: string) => Incidencia[]
   /** Último cambio de estado a 'avería' para una máquina actualmente en avería */
   getUltimaAveriaRecord: (maquinaId: string) => MaquinaEstado | null
+  /** Historial completo de averías de una máquina (abiertas + cerradas), desc por timestamp */
+  getAveriasByMaquina: (maquinaId: string) => MaquinaEstado[]
+  /** Documentos adjuntos a una fila concreta de avería */
+  getDocumentosByAveria: (maquinaEstadoId: string) => AveriaDocumento[]
+  /** Fuerza recarga de averia_documentos desde Supabase (tras subir uno nuevo) */
+  refetchAveriaDocumentos: () => Promise<void>
 }
 
 // -----------------------------------------------------------------------------
@@ -144,6 +163,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   incidencias: [],
   mantenimientos: [],
   estadosHistorial: [],
+  averiaDocumentos: [],
 
   loading: false,
   error: null,
@@ -164,6 +184,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         incidencias: [],
         mantenimientos: [],
         estadosHistorial: [],
+        averiaDocumentos: [],
         loading: false,
         initialized: true,
       })
@@ -171,12 +192,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
 
     try {
-      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes] = await Promise.all([
+      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes, docsRes] = await Promise.all([
         supabase.from('maquinas').select('*').order('codigo'),
         supabase.from('usos_equipo').select('*').order('created_at', { ascending: false }),
         supabase.from('incidencias').select('*').order('created_at', { ascending: false }),
         supabase.from('mantenimientos').select('*').order('fecha', { ascending: false }),
         supabase.from('maquina_estados').select('*').order('timestamp', { ascending: false }).limit(500),
+        supabase.from('averia_documentos').select('*').order('subido_en', { ascending: false }),
       ])
 
       if (maquinasRes.error) throw maquinasRes.error
@@ -184,6 +206,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       if (incidenciasRes.error) throw incidenciasRes.error
       if (mantRes.error) throw mantRes.error
       if (estadosRes.error) throw estadosRes.error
+      if (docsRes.error) throw docsRes.error
 
       set({
         maquinas: (maquinasRes.data ?? []) as Maquina[],
@@ -191,6 +214,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         incidencias: (incidenciasRes.data ?? []) as Incidencia[],
         mantenimientos: (mantRes.data ?? []) as Mantenimiento[],
         estadosHistorial: (estadosRes.data ?? []) as MaquinaEstado[],
+        averiaDocumentos: (docsRes.data ?? []) as AveriaDocumento[],
         loading: false,
         initialized: true,
       })
@@ -251,6 +275,15 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mantenimientos' }, refetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'averia_documentos' }, () => {
+        supabase!
+          .from('averia_documentos')
+          .select('*')
+          .order('subido_en', { ascending: false })
+          .then(({ data }) => {
+            if (data) set({ averiaDocumentos: data as AveriaDocumento[] })
+          })
+      })
       .subscribe()
 
     return () => {
@@ -639,6 +672,76 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
   },
 
+  resolverAveria: async ({
+    maquinaId,
+    adminId,
+    resolucionDescripcion,
+    tecnicoIntervencion,
+    fechaIntervencion,
+  }) => {
+    if (!isSupabaseConfigured || !supabase) {
+      // Modo fallback: marca la última avería abierta como cerrada localmente.
+      let cerradaId: string | null = null
+      set((s) => {
+        const abiertas = s.estadosHistorial
+          .filter((e) => e.maquina_id === maquinaId && e.estado === 'avería' && !e.cerrada_en)
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        const target = abiertas[0]
+        if (!target) return s
+        cerradaId = target.id
+        const nowIso = new Date().toISOString()
+        return {
+          estadosHistorial: s.estadosHistorial.map((e) =>
+            e.id === target.id
+              ? {
+                  ...e,
+                  cerrada_en: nowIso,
+                  cerrada_por: adminId ?? null,
+                  resolucion_descripcion: resolucionDescripcion,
+                  tecnico_intervencion: tecnicoIntervencion ?? null,
+                  fecha_intervencion: fechaIntervencion ?? null,
+                }
+              : e,
+          ),
+          maquinas: s.maquinas.map((m) =>
+            m.id === maquinaId && m.estado_actual === 'avería'
+              ? { ...m, estado_actual: 'parada' as EstadoMaquina }
+              : m,
+          ),
+        }
+      })
+      return cerradaId
+    }
+
+    const { data, error } = await supabase.rpc('resolve_maquina_averia', {
+      p_maquina_id: maquinaId,
+      p_usuario_id: adminId ?? null,
+      p_resolucion_descripcion: resolucionDescripcion,
+      p_tecnico_intervencion: tecnicoIntervencion ?? null,
+      p_fecha_intervencion: fechaIntervencion ?? null,
+    })
+    if (error) {
+      console.error('[resolverAveria] error:', error)
+      set({ error: error.message })
+      return null
+    }
+    // La función RPC devuelve el id de maquina_estados cerrado (uuid)
+    return (data as string | null) ?? null
+  },
+
+  refetchAveriaDocumentos: async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    const { data, error } = await supabase
+      .from('averia_documentos')
+      .select('*')
+      .order('subido_en', { ascending: false })
+    if (error) {
+      console.error('[refetchAveriaDocumentos] error:', error)
+      return
+    }
+    set({ averiaDocumentos: (data ?? []) as AveriaDocumento[] })
+  },
+
   // ---------------------------------------------------------------------------
   // Selectors
   // ---------------------------------------------------------------------------
@@ -654,4 +757,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const history = get().estadosHistorial.filter((e) => e.maquina_id === maquinaId)
     return history.find((e) => e.estado === 'avería') ?? null
   },
+
+  getAveriasByMaquina: (maquinaId) =>
+    get().estadosHistorial.filter((e) => e.maquina_id === maquinaId && e.estado === 'avería'),
+
+  getDocumentosByAveria: (maquinaEstadoId) =>
+    get().averiaDocumentos.filter((d) => d.maquina_estado_id === maquinaEstadoId),
 }))

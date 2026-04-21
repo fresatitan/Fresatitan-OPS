@@ -6,6 +6,7 @@ export type TipoMaquina = 'fresadora' | 'sinterizadora' | 'impresora_3d'
 export type ResultadoUso = 'ok' | 'ko' | 'pendiente'
 export type TipoMantenimiento = 'preventivo' | 'correctivo' | 'predictivo'
 export type SeveridadAveria = 'critica' | 'leve'
+export type TipoDocumentoAveria = 'parte_tecnico' | 'factura' | 'foto' | 'otro'
 
 export interface Profile {
   id: string
@@ -47,6 +48,22 @@ export interface MaquinaEstado {
   severidad_confirmada_por_admin: boolean
   cerrada_en: string | null        // ISO timestamp; null = avería todavía abierta
   cerrada_por: string | null       // profile.id del admin que la cerró
+  // Datos de resolución (se rellenan al cerrar la avería)
+  resolucion_descripcion: string | null
+  tecnico_intervencion: string | null
+  fecha_intervencion: string | null   // ISO date YYYY-MM-DD
+}
+
+export interface AveriaDocumento {
+  id: string
+  maquina_estado_id: string
+  storage_path: string
+  nombre_original: string
+  tipo: TipoDocumentoAveria
+  mime_type: string | null
+  tamano_bytes: number | null
+  subido_por: string | null
+  subido_en: string
 }
 
 // Un "uso de equipo" = una tanda preparación → acabado sobre una máquina
@@ -115,6 +132,7 @@ export interface Database {
       incidencias: TableDef<Incidencia, Omit<Incidencia, 'id' | 'created_at'>, Partial<Omit<Incidencia, 'id'>>>
       mantenimientos: TableDef<Mantenimiento, Omit<Mantenimiento, 'id' | 'created_at' | 'updated_at'>, Partial<Omit<Mantenimiento, 'id'>>>
       alertas: TableDef<Alerta, Omit<Alerta, 'id' | 'created_at'>, Partial<Omit<Alerta, 'id'>>>
+      averia_documentos: TableDef<AveriaDocumento, Omit<AveriaDocumento, 'id' | 'subido_en'>, Partial<Omit<AveriaDocumento, 'id'>>>
     }
     Views: Record<string, never>
     Functions: Record<string, never>
