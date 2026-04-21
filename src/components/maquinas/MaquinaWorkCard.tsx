@@ -36,109 +36,118 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
       <div
         className={`
           bg-surface-2 rounded-lg border transition-all duration-200 relative
+          h-full flex flex-col
           ${maquina.estado_actual === 'avería' ? 'border-averia/30 animate-averia' : ''}
           ${maquina.estado_actual === 'activa' ? 'border-activa/20' : ''}
           ${maquina.estado_actual === 'mantenimiento' ? 'border-mantenimiento/20' : ''}
           ${!isBusy && maquina.estado_actual !== 'avería' ? 'border-border-subtle hover:border-border-default' : ''}
         `}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="font-mono text-xs text-primary font-medium shrink-0">{maquina.codigo}</span>
-            <span className="text-[10px] text-text-tertiary">|</span>
-            <span className="text-sm text-text-primary font-medium truncate">{maquina.nombre}</span>
+        {/* Header — código, nombre, tipo y estado */}
+        <div className="px-4 pt-3 pb-2.5 border-b border-border-subtle">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="font-mono text-[11px] text-primary font-bold">{maquina.codigo}</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-tertiary">
+                  {maquina.tipo === 'impresora_3d' ? 'Impresora 3D' : maquina.tipo}
+                </span>
+              </div>
+              <h4 className="text-sm text-text-primary font-semibold leading-snug truncate">{maquina.nombre}</h4>
+            </div>
+            <Badge estado={maquina.estado_actual} size="sm" />
           </div>
-          <Badge estado={maquina.estado_actual} size="sm" />
         </div>
 
         {/* Active uso indicator */}
         {activeUso && <ActiveUsoBar maquina={maquina} uso={activeUso} onFinish={() => setShowCerrar(true)} />}
 
-        {/* Last completed uso */}
-        {!isBusy && lastUso && (
-          <div className="px-4 py-2.5 bg-surface-3/50 border-b border-border-subtle">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono text-text-tertiary tracking-wider">ÚLTIMO USO</span>
-              <span className={`text-[10px] font-mono font-medium ${lastUso.resultado === 'ok' ? 'text-activa' : 'text-averia'}`}>
-                {lastUso.resultado.toUpperCase()}
-              </span>
+        {/* Zona central informativa (crece para mantener altura homogénea) */}
+        <div className="flex-1 px-4 py-3 flex flex-col justify-center">
+          {!isBusy && lastUso ? (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[9px] font-mono text-text-tertiary tracking-wider uppercase">Último uso</span>
+                <span className={`text-[10px] font-mono font-bold ${lastUso.resultado === 'ok' ? 'text-activa' : 'text-averia'}`}>
+                  {lastUso.resultado.toUpperCase()}
+                </span>
+              </div>
+              <div className="space-y-1">
+                <InfoRow label="Fecha" value={lastUso.fecha} mono />
+                <InfoRow
+                  label="Preparación"
+                  value={`${formatTime(lastUso.hora_preparacion)} · ${getName(lastUso.tecnico_preparacion_id)}`}
+                  highlight
+                />
+                {lastUso.hora_acabado && (
+                  <InfoRow
+                    label="Acabado"
+                    value={`${formatTime(lastUso.hora_acabado)} · ${getName(lastUso.tecnico_acabado_id)}`}
+                  />
+                )}
+              </div>
+            </>
+          ) : !isBusy ? (
+            <div className="text-center py-2">
+              <p className="text-[11px] text-text-tertiary">Sin trabajos registrados</p>
+              {maquina.ubicacion && (
+                <p className="text-[10px] text-text-tertiary mt-1 font-mono">{maquina.ubicacion}</p>
+              )}
             </div>
-            <InfoRow label="Fecha" value={lastUso.fecha} mono />
-            <InfoRow label="Preparación" value={`${formatTime(lastUso.hora_preparacion)} · ${getName(lastUso.tecnico_preparacion_id)}`} highlight />
-            {lastUso.hora_acabado && (
-              <InfoRow label="Acabado" value={`${formatTime(lastUso.hora_acabado)} · ${getName(lastUso.tecnico_acabado_id)}`} />
-            )}
-          </div>
-        )}
+          ) : null}
+        </div>
 
-        {/* Info + Actions */}
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between text-xs mb-3">
-            <span className="text-text-tertiary">Tipo</span>
-            <span className="text-text-secondary font-mono text-[11px]">
-              {maquina.tipo.toUpperCase()}
-              {maquina.requiere_lanzamiento && <span className="text-primary ml-1.5">· lanzamiento</span>}
-            </span>
-          </div>
-          {maquina.ubicacion && (
-            <div className="flex items-center justify-between text-xs mb-3">
-              <span className="text-text-tertiary">Ubicación</span>
-              <span className="text-text-secondary">{maquina.ubicacion}</span>
-            </div>
+        {/* Acciones — siempre en la misma línea gracias al flex-col + mt-auto */}
+        <div className="px-4 pt-0 pb-3 mt-auto flex gap-2">
+          {!isBusy ? (
+            <button
+              onClick={() => setShowNuevo(true)}
+              disabled={!canOperate}
+              className="flex-1 px-3 py-2.5 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Nuevo uso
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowCerrar(true)}
+              className="flex-1 px-3 py-2.5 rounded text-xs font-semibold bg-activa text-white hover:opacity-90 transition-colors"
+            >
+              Cerrar uso
+            </button>
           )}
 
-          <div className="flex gap-2">
-            {!isBusy ? (
-              <button
-                onClick={() => setShowNuevo(true)}
-                disabled={!canOperate}
-                className="flex-1 px-3 py-2 rounded text-xs font-medium bg-primary text-text-inverse hover:bg-primary-light disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                Nuevo uso
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowCerrar(true)}
-                className="flex-1 px-3 py-2 rounded text-xs font-medium bg-activa text-white hover:opacity-90 transition-colors"
-              >
-                Cerrar uso
-              </button>
-            )}
+          {onHistorial && (
+            <button
+              onClick={onHistorial}
+              title="Ver historial de averías"
+              aria-label="Ver historial de averías"
+              className="
+                shrink-0 px-2.5 py-2.5 rounded text-xs font-medium
+                bg-surface-3 border border-border-subtle text-text-secondary
+                hover:bg-surface-4 hover:text-primary hover:border-primary/40
+                transition-colors flex items-center justify-center gap-1.5
+              "
+            >
+              <HistoryIcon />
+              <span className="hidden md:inline">Historial</span>
+            </button>
+          )}
 
-            {onHistorial && (
-              <button
-                onClick={onHistorial}
-                title="Ver historial de averías"
-                aria-label="Ver historial de averías"
-                className="
-                  shrink-0 px-2.5 py-2 rounded text-xs font-medium
-                  bg-surface-3 border border-border-subtle text-text-secondary
-                  hover:bg-surface-4 hover:text-primary hover:border-primary/40
-                  transition-colors flex items-center gap-1.5
-                "
-              >
-                <HistoryIcon />
-                <span className="hidden sm:inline">Historial</span>
-              </button>
-            )}
-
-            {onEdit && (
-              <button
-                onClick={onEdit}
-                title="Editar máquina"
-                aria-label="Editar máquina"
-                className="
-                  shrink-0 px-2.5 py-2 rounded text-xs font-medium
-                  bg-surface-3 border border-border-subtle text-text-secondary
-                  hover:bg-surface-4 hover:text-text-primary
-                  transition-colors
-                "
-              >
-                <EditIcon />
-              </button>
-            )}
-          </div>
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              title="Editar máquina"
+              aria-label="Editar máquina"
+              className="
+                shrink-0 px-2.5 py-2.5 rounded text-xs font-medium
+                bg-surface-3 border border-border-subtle text-text-secondary
+                hover:bg-surface-4 hover:text-text-primary
+                transition-colors
+              "
+            >
+              <EditIcon />
+            </button>
+          )}
         </div>
       </div>
 
