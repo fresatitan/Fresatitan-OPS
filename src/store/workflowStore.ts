@@ -236,6 +236,19 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
     const refetch = () => get().fetchAll()
 
+    // Helper: refetch del historial de estados. Lo extraemos para poder llamarlo
+    // desde varios listeners diferentes.
+    const refetchEstados = () => {
+      supabase!
+        .from('maquina_estados')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(500)
+        .then(({ data }) => {
+          if (data) set({ estadosHistorial: data as MaquinaEstado[] })
+        })
+    }
+
     const channel = supabase
       .channel('workflow-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'maquinas' }, () => {
@@ -247,14 +260,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           .then(({ data }) => {
             if (data) set({ maquinas: data as Maquina[] })
           })
-        supabase!
-          .from('maquina_estados')
-          .select('*')
-          .order('timestamp', { ascending: false })
-          .limit(500)
-          .then(({ data }) => {
-            if (data) set({ estadosHistorial: data as MaquinaEstado[] })
-          })
+        refetchEstados()
+      })
+      // Escucha también directamente cambios en maquina_estados para los casos
+      // en los que la máquina ya estaba en avería y se añade un nuevo evento
+      // (confirmación de severidad, cierre, etc.) — el UPDATE en maquinas no
+      // dispara si el estado no cambia.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'maquina_estados' }, () => {
+        refetchEstados()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'usos_equipo' }, () => {
         supabase!
