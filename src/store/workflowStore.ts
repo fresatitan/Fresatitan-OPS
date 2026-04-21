@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { useAuthStore } from './authStore'
 import type {
   Maquina,
   UsoEquipo,
@@ -10,6 +11,7 @@ import type {
   TipoMantenimiento,
   ResultadoUso,
   TipoMaquina,
+  SeveridadAveria,
 } from '../types/database'
 
 // =============================================================================
@@ -121,7 +123,8 @@ interface WorkflowState {
   updateMaquina: (id: string, data: Partial<Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_preparacion' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion' | 'activa'>>) => Promise<void>
   removeMaquina: (id: string) => Promise<void>
   updateEstadoMaquina: (maquinaId: string, estado: EstadoMaquina) => Promise<void>
-  reportarAveria: (maquinaId: string, motivo: string, usuarioId?: string | null) => Promise<void>
+  reportarAveria: (maquinaId: string, motivo: string, usuarioId?: string | null, severidadPropuesta?: SeveridadAveria) => Promise<void>
+  confirmarSeveridadAveria: (maquinaEstadoId: string, severidadFinal: SeveridadAveria, adminId?: string | null) => Promise<void>
 
   // Selectors
   getUsosByMaquina: (maquinaId: string) => UsoEquipo[]
@@ -373,6 +376,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         m.id === uso.maquina_id ? { ...m, estado_actual: 'parada' as EstadoMaquina } : m
       ),
     }))
+
+    // Si el uso se ha cerrado en KO, notificar a los admins por email.
+    // No bloqueamos ni rompemos el flujo si la notificación falla.
+    if (resultado === 'ko') {
+      supabase.functions
+        .invoke('notify-alerta', { body: { event: 'uso_ko', uso_id } })
+        .catch((e) => console.error('[cerrarUso] notify-alerta failed (non-fatal):', e))
+    }
   },
 
   cancelarUso: async (usoId) => {
@@ -504,10 +515,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
     // Caso especial: marcar avería como resuelta → RPC (funciona también para anon)
     if (estado === 'parada') {
+      // Guardamos si la máquina estaba en avería antes de resolver, para decidir
+      // si disparamos el email "Avería resuelta" a los admins.
+      const current = get().maquinas.find((m) => m.id === maquinaId)
+      const wasAveria = current?.estado_actual === 'avería'
+
       const { error } = await supabase.rpc('resolve_maquina_averia', { p_maquina_id: maquinaId })
       if (error) {
         console.error('[updateEstadoMaquina] resolve error:', error)
         set({ error: error.message })
+        return
+      }
+
+      if (wasAveria) {
+        const resueltoPorId = useAuthStore.getState().user?.id ?? null
+        supabase.functions
+          .invoke('notify-alerta', {
+            body: {
+              event: 'averia_resuelta',
+              maquina_id: maquinaId,
+              resuelto_por_id: resueltoPorId,
+            },
+          })
+          .catch((e) => console.error('[updateEstadoMaquina] notify-alerta (resuelta) failed (non-fatal):', e))
       }
       return
     }
@@ -519,10 +549,25 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (error) {
       console.error('[updateEstadoMaquina] error:', error)
       set({ error: error.message })
+      return
+    }
+    // Si el admin marca una máquina como avería desde el panel admin,
+    // también disparamos el email a Roser + Toni.
+    if (estado === 'avería') {
+      supabase.functions
+        .invoke('notify-alerta', {
+          body: {
+            event: 'averia_reportada',
+            maquina_id: maquinaId,
+            motivo: null,
+            reportado_por_id: null,
+          },
+        })
+        .catch((e) => console.error('[updateEstadoMaquina] notify-alerta failed (non-fatal):', e))
     }
   },
 
-  reportarAveria: async (maquinaId, motivo, usuarioId) => {
+  reportarAveria: async (maquinaId, motivo, usuarioId, severidadPropuesta = 'critica') => {
     if (!isSupabaseConfigured || !supabase) {
       set((s) => ({
         maquinas: s.maquinas.map((m) =>
@@ -531,18 +576,67 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       }))
       return
     }
-    // Llamamos a la función RPC SECURITY DEFINER que encapsula el UPDATE +
-    // el INSERT en maquina_estados. Ver supabase/migrations/0005_rpc_report_averia.sql
+    // RPC SECURITY DEFINER: bloquea máquina + registra la entrada en historial
+    // con la severidad propuesta por el trabajador (pendiente de confirmación
+    // por admin). Ver supabase/migrations/0008_add_severidad_averia.sql
     const { error } = await supabase.rpc('report_maquina_averia', {
       p_maquina_id: maquinaId,
       p_motivo: motivo,
       p_usuario_id: usuarioId ?? null,
+      p_severidad_propuesta: severidadPropuesta,
     })
     if (error) {
       console.error('[reportarAveria] error:', error)
       set({ error: error.message })
+      return
     }
-    // El Realtime propagará automáticamente el cambio a los dashboards admin
+    // El Realtime propagará automáticamente el cambio a los dashboards admin.
+    // En paralelo, disparamos el email a Roser + Toni. No bloqueamos el flujo
+    // de reporte si el envío del correo falla (la avería ya quedó registrada).
+    supabase.functions
+      .invoke('notify-alerta', {
+        body: {
+          event: 'averia_reportada',
+          maquina_id: maquinaId,
+          motivo,
+          reportado_por_id: usuarioId ?? null,
+          severidad_propuesta: severidadPropuesta,
+        },
+      })
+      .catch((e) => console.error('[reportarAveria] notify-alerta failed (non-fatal):', e))
+  },
+
+  confirmarSeveridadAveria: async (maquinaEstadoId, severidadFinal, adminId) => {
+    if (!isSupabaseConfigured || !supabase) {
+      // En modo fallback actualizamos solo la fila del historial; la máquina
+      // se unbloquea si la severidad final es leve.
+      set((s) => {
+        const row = s.estadosHistorial.find((e) => e.id === maquinaEstadoId)
+        const nextHistorial = s.estadosHistorial.map((e) =>
+          e.id === maquinaEstadoId
+            ? { ...e, severidad: severidadFinal, severidad_confirmada_por_admin: true }
+            : e,
+        )
+        const nextMaquinas = row
+          ? s.maquinas.map((m) =>
+              m.id === row.maquina_id && severidadFinal === 'leve' && m.estado_actual === 'avería'
+                ? { ...m, estado_actual: 'parada' as EstadoMaquina }
+                : m,
+            )
+          : s.maquinas
+        return { estadosHistorial: nextHistorial, maquinas: nextMaquinas }
+      })
+      return
+    }
+    const { error } = await supabase.rpc('confirmar_severidad_averia', {
+      p_maquina_estado_id: maquinaEstadoId,
+      p_severidad_final: severidadFinal,
+      p_admin_id: adminId ?? null,
+    })
+    if (error) {
+      console.error('[confirmarSeveridadAveria] error:', error)
+      set({ error: error.message })
+    }
   },
 
   // ---------------------------------------------------------------------------

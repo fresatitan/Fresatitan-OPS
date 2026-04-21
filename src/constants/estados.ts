@@ -1,4 +1,4 @@
-import type { EstadoMaquina, RolUsuario, TipoMaquina, ResultadoUso, TipoMantenimiento } from '../types/database'
+import type { EstadoMaquina, RolUsuario, TipoMaquina, ResultadoUso, TipoMantenimiento, SeveridadAveria } from '../types/database'
 
 export const ESTADOS_MAQUINA: Record<EstadoMaquina, { label: string; color: string; bg: string }> = {
   activa: { label: 'En uso', color: 'text-activa', bg: 'bg-activa' },
@@ -38,4 +38,17 @@ export const TIPOS_MANTENIMIENTO: Record<TipoMantenimiento, string> = {
   preventivo: 'Preventivo',
   correctivo: 'Correctivo',
   predictivo: 'Predictivo',
+}
+
+export const SEVERIDADES: Record<SeveridadAveria, { label: string; short: string; description: string }> = {
+  critica: {
+    label: 'Crítica',
+    short: 'CRÍTICA',
+    description: 'La máquina no se puede utilizar.',
+  },
+  leve: {
+    label: 'Leve',
+    short: 'LEVE',
+    description: 'Hay algo raro pero la máquina se puede seguir usando.',
+  },
 }

@@ -3,7 +3,7 @@ import Modal from '../ui/Modal'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
-import type { Maquina } from '../../types/database'
+import type { Maquina, SeveridadAveria } from '../../types/database'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -45,6 +45,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   const [observaciones, setObservaciones] = useState('')
   const [averiaMotivo, setAveriaMotivo] = useState('')
   const [averiaTecnico, setAveriaTecnico] = useState<Trabajador | null>(null)
+  const [averiaSeveridad, setAveriaSeveridad] = useState<SeveridadAveria>('critica')
 
   useEffect(() => {
     if (open) {
@@ -57,12 +58,18 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
       setObservaciones('')
       setAveriaMotivo('')
       setAveriaTecnico(null)
+      setAveriaSeveridad('critica')
     }
   }, [open, maquina.requiere_preparacion])
 
   const handleReportarAveria = async () => {
     if (!averiaMotivo.trim()) return
-    await reportarAveria(maquina.id, averiaMotivo.trim(), averiaTecnico?.id ?? null)
+    await reportarAveria(
+      maquina.id,
+      averiaMotivo.trim(),
+      averiaTecnico?.id ?? null,
+      averiaSeveridad,
+    )
     toast.error(`${maquina.codigo} marcada como avería`, { icon: '⚠' })
     onClose()
   }
@@ -144,7 +151,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
         {step === 'averia' && (
           <StepContent
             title="⚠ Reportar avería"
-            subtitle="Describe brevemente qué problema tiene la máquina. Esto la marcará como fuera de servicio hasta que el admin la resuelva."
+            subtitle="Describe qué ocurre y propón la gravedad. La máquina quedará bloqueada hasta que el admin revise la alerta."
           >
             <div className="space-y-4">
               <div>
@@ -162,12 +169,36 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
                   autoFocus
                 />
               </div>
+
+              {/* Propuesta de severidad */}
+              <div>
+                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">
+                  ¿Cómo de grave es? <span className="normal-case text-text-tertiary">(tu propuesta, el admin decide)</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <SeveridadOption
+                    active={averiaSeveridad === 'critica'}
+                    onClick={() => setAveriaSeveridad('critica')}
+                    tone="critica"
+                    title="Crítica"
+                    description="La máquina no se puede usar"
+                  />
+                  <SeveridadOption
+                    active={averiaSeveridad === 'leve'}
+                    onClick={() => setAveriaSeveridad('leve')}
+                    tone="leve"
+                    title="Leve"
+                    description="Se puede seguir usando, pero hay algo raro"
+                  />
+                </div>
+              </div>
+
               <button
                 onClick={handleReportarAveria}
                 disabled={!averiaMotivo.trim() || !averiaTecnico}
                 className="w-full py-5 rounded-xl text-lg font-bold bg-averia text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-averia/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Marcar máquina como averiada
+                Enviar aviso al admin
               </button>
               <button
                 onClick={() => setStep('preparacion')}
@@ -375,6 +406,44 @@ function TrabajadorGrid({
         )
       })}
     </div>
+  )
+}
+
+function SeveridadOption({
+  active,
+  onClick,
+  tone,
+  title,
+  description,
+}: {
+  active: boolean
+  onClick: () => void
+  tone: 'critica' | 'leve'
+  title: string
+  description: string
+}) {
+  const palette = tone === 'critica'
+    ? { border: 'border-averia', bg: 'bg-averia/10', text: 'text-averia', icon: '🔴' }
+    : { border: 'border-parada', bg: 'bg-parada/10', text: 'text-parada', icon: '🟡' }
+
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        flex flex-col items-start gap-1 p-4 rounded-xl border-2 text-left transition-all
+        active:scale-[0.98]
+        ${active
+          ? `${palette.bg} ${palette.border}`
+          : 'bg-surface-2 border-border-subtle hover:border-border-default hover:bg-surface-3'
+        }
+      `}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-lg">{palette.icon}</span>
+        <span className={`text-base font-bold ${active ? palette.text : 'text-text-primary'}`}>{title}</span>
+      </div>
+      <span className="text-xs text-text-tertiary leading-snug">{description}</span>
+    </button>
   )
 }
 

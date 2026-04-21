@@ -5,6 +5,7 @@ export type RolUsuario = 'operario' | 'supervisor' | 'tecnico' | 'admin'
 export type TipoMaquina = 'fresadora' | 'sinterizadora' | 'impresora_3d'
 export type ResultadoUso = 'ok' | 'ko' | 'pendiente'
 export type TipoMantenimiento = 'preventivo' | 'correctivo' | 'predictivo'
+export type SeveridadAveria = 'critica' | 'leve'
 
 export interface Profile {
   id: string
@@ -41,6 +42,11 @@ export interface MaquinaEstado {
   motivo: string | null
   usuario_id: string | null
   timestamp: string
+  // Solo relevante cuando estado = 'avería'
+  severidad: SeveridadAveria | null
+  severidad_confirmada_por_admin: boolean
+  cerrada_en: string | null        // ISO timestamp; null = avería todavía abierta
+  cerrada_por: string | null       // profile.id del admin que la cerró
 }
 
 // Un "uso de equipo" = una tanda preparación → acabado sobre una máquina
