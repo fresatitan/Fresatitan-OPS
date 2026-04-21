@@ -18,3 +18,19 @@ export function formatTime(hora: string | null | undefined): string {
   if (!hora) return '—'
   return hora.slice(0, 5)
 }
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Devuelve el id si tiene formato UUID válido; si no, null.
+ *
+ * Los "admins dev" (loginAs sin Supabase Auth) tienen IDs no-UUID tipo
+ * "admin-roser". Si los pasáramos tal cual a columnas `uuid` de Supabase
+ * fallarían con "invalid input syntax for type uuid". Este helper se usa
+ * en la frontera (store + lib de storage) para sanitizar sin que los
+ * componentes tengan que preocuparse.
+ */
+export function toValidUuid(id: string | null | undefined): string | null {
+  if (!id) return null
+  return UUID_REGEX.test(id) ? id : null
+}

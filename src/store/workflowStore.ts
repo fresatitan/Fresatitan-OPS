@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { toValidUuid } from '../lib/utils'
 import { useAuthStore } from './authStore'
 import type {
   Maquina,
@@ -677,7 +678,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const { error } = await supabase.rpc('confirmar_severidad_averia', {
       p_maquina_estado_id: maquinaEstadoId,
       p_severidad_final: severidadFinal,
-      p_admin_id: adminId ?? null,
+      p_admin_id: toValidUuid(adminId),
     })
     if (error) {
       console.error('[confirmarSeveridadAveria] error:', error)
@@ -728,7 +729,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
     const { data, error } = await supabase.rpc('resolve_maquina_averia', {
       p_maquina_id: maquinaId,
-      p_usuario_id: adminId ?? null,
+      p_usuario_id: toValidUuid(adminId),
       p_resolucion_descripcion: resolucionDescripcion,
       p_tecnico_intervencion: tecnicoIntervencion ?? null,
       p_fecha_intervencion: fechaIntervencion ?? null,

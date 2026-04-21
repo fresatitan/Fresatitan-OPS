@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase'
+import { toValidUuid } from './utils'
 import type { AveriaDocumento, TipoDocumentoAveria } from '../types/database'
 
 const BUCKET = 'averia-documentos'
@@ -88,7 +89,7 @@ export async function uploadAveriaDocumento({
       tipo: tipo ?? inferirTipo(file),
       mime_type: file.type,
       tamano_bytes: file.size,
-      subido_por: subidoPor ?? null,
+      subido_por: toValidUuid(subidoPor),
     })
     .select()
     .single()
