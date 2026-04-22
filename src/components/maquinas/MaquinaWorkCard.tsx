@@ -43,10 +43,11 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
       maquina.estado_actual !== 'avería', // si está bloqueada ya no es "pendiente"
   )
 
-  // Preparación vigente (la última, si fue hoy)
+  // Preparación vigente: la más reciente, solo si es posterior al último cierre de uso
+  const maquinaNecesitaPrep = useWorkflowStore((s) => s.maquinaNecesitaPrep)
+  const needsPrep = maquinaNecesitaPrep(maquina.id)
   const ultimaPrep = getUltimaPreparacion(maquina.id)
-  const today = new Date().toISOString().slice(0, 10)
-  const preparadaHoy = ultimaPrep && ultimaPrep.fecha === today ? ultimaPrep : null
+  const preparacionVigente = !needsPrep && ultimaPrep ? ultimaPrep : null
 
   return (
     <>
@@ -94,17 +95,26 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
         {/* Active uso indicator */}
         {activeUso && <ActiveUsoBar maquina={maquina} uso={activeUso} onFinish={() => setShowCerrar(true)} />}
 
-        {/* Badge de preparación de hoy */}
-        {preparadaHoy && (
-          <div className="px-4 py-1.5 bg-activa/10 border-b border-activa/20 flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase text-activa">
-              <span>🧹</span>
-              <span>Preparada hoy</span>
-            </span>
-            <span className="text-[10px] font-mono text-activa/80">
-              {formatTime(preparadaHoy.hora)} · {getName(preparadaHoy.trabajador_id)}
-            </span>
-          </div>
+        {/* Badge: preparación vigente (verde) o pendiente (ámbar) — solo si la máquina está libre */}
+        {!isBusy && maquina.estado_actual === 'parada' && (
+          preparacionVigente ? (
+            <div className="px-4 py-1.5 bg-activa/10 border-b border-activa/20 flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase text-activa">
+                <span>✓</span>
+                <span>Lista para producir</span>
+              </span>
+              <span className="text-[10px] font-mono text-activa/80">
+                {formatTime(preparacionVigente.hora)} · {getName(preparacionVigente.trabajador_id)}
+              </span>
+            </div>
+          ) : (
+            <div className="px-4 py-1.5 bg-parada/10 border-b border-parada/30 flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase text-parada">
+                <span>🧹</span>
+                <span>Necesita preparación</span>
+              </span>
+            </div>
+          )
         )}
 
         {/* Zona central informativa (crece para mantener altura homogénea) */}

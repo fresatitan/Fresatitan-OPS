@@ -162,6 +162,12 @@ interface WorkflowState {
   refetchAveriaDocumentos: () => Promise<void>
   /** Última preparación registrada de una máquina (la más reciente, si hay) */
   getUltimaPreparacion: (maquinaId: string) => Preparacion | null
+  /**
+   * True si la máquina necesita una preparación ANTES de poder iniciar un uso.
+   * Regla: la última preparación debe ser posterior al último uso cerrado
+   * (fecha + hora_acabado). Sin preparación registrada → siempre true.
+   */
+  maquinaNecesitaPrep: (maquinaId: string) => boolean
 }
 
 // -----------------------------------------------------------------------------
@@ -839,4 +845,30 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   getUltimaPreparacion: (maquinaId) =>
     get().preparaciones.find((p) => p.maquina_id === maquinaId) ?? null,
+
+  maquinaNecesitaPrep: (maquinaId) => {
+    const state = get()
+
+    // Última preparación de esta máquina (store ya viene ordenado desc)
+    const lastPrep = state.preparaciones.find((p) => p.maquina_id === maquinaId) ?? null
+
+    // Último uso cerrado (con hora_acabado rellena)
+    const lastUsoClosed = state.usos
+      .filter(
+        (u) => u.maquina_id === maquinaId && u.resultado !== 'pendiente' && !!u.hora_acabado,
+      )
+      .sort((a, b) => {
+        const aKey = `${a.fecha}T${a.hora_acabado ?? '00:00'}`
+        const bKey = `${b.fecha}T${b.hora_acabado ?? '00:00'}`
+        return bKey.localeCompare(aKey)
+      })[0]
+
+    if (!lastPrep) return true             // nunca se ha preparado
+    if (!lastUsoClosed) return false       // se ha preparado y no se ha usado → ok
+
+    // Comparar: si la prep fue antes del último cierre, hay que preparar de nuevo
+    const prepKey = `${lastPrep.fecha}T${lastPrep.hora}`
+    const usoKey = `${lastUsoClosed.fecha}T${lastUsoClosed.hora_acabado ?? '00:00'}`
+    return prepKey < usoKey
+  },
 }))

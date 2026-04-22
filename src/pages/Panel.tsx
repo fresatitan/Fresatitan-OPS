@@ -32,6 +32,8 @@ export default function Panel() {
 
   const [family, setFamily] = useState<TipoMaquina | null>(null)
 
+  const maquinaNecesitaPrep = useWorkflowStore((s) => s.maquinaNecesitaPrep)
+
   const [selectorFor, setSelectorFor] = useState<Maquina | null>(null)
   const [nuevoFor, setNuevoFor] = useState<Maquina | null>(null)
   const [mantFor, setMantFor] = useState<Maquina | null>(null)
@@ -124,6 +126,7 @@ export default function Panel() {
           open={!!selectorFor}
           onClose={() => setSelectorFor(null)}
           maquina={selectorFor}
+          needsPrep={maquinaNecesitaPrep(selectorFor.id)}
           onSelectProduccion={handleSelectProduccion}
           onSelectMantenimiento={handleSelectMantenimiento}
           onSelectPreparacion={handleSelectPreparacion}
@@ -359,6 +362,7 @@ function PlantMaquinaCard({
 }) {
   const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
   const getUltimaPreparacion = useWorkflowStore((s) => s.getUltimaPreparacion)
+  const maquinaNecesitaPrep = useWorkflowStore((s) => s.maquinaNecesitaPrep)
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
 
   const isAvailable = maquina.estado_actual === 'parada'
@@ -385,11 +389,12 @@ function PlantMaquinaCard({
       !(e.severidad_confirmada_por_admin && e.severidad === 'critica'),
   )
 
-  // ¿Ha sido preparada hoy? (solo sirve saberlo si está libre; si está en uso
-  // ya da igual porque ya la están usando).
+  // ¿Necesita preparación antes del próximo uso? (Regla: preparación debe
+  // ser posterior al último cierre de uso). Si no lo necesita, mostramos la
+  // última prep registrada como referencia.
+  const needsPrep = maquinaNecesitaPrep(maquina.id)
   const ultimaPrep = getUltimaPreparacion(maquina.id)
-  const today = new Date().toISOString().slice(0, 10)
-  const preparadaHoy = ultimaPrep && ultimaPrep.fecha === today ? ultimaPrep : null
+  const listaParaUsar = !needsPrep && ultimaPrep ? ultimaPrep : null
 
   const warning = openAveria
     ? openAveria.severidad_confirmada_por_admin && openAveria.severidad === 'leve'
@@ -455,24 +460,24 @@ function PlantMaquinaCard({
         </div>
       )}
 
-      {/* Estado de preparación — verde si ya fue preparada hoy, ámbar si no */}
+      {/* Estado de preparación — verde si lista para producir, ámbar si necesita prep */}
       {isAvailable && (
-        preparadaHoy ? (
+        listaParaUsar ? (
           <div className="mb-2 px-3 py-2 rounded-lg bg-activa/15 border border-activa/30 flex items-center gap-2">
-            <span className="text-lg">🧹</span>
+            <span className="text-lg">✅</span>
             <div className="flex-1 min-w-0 leading-tight">
-              <div className="text-xs font-bold text-activa">Preparada hoy</div>
+              <div className="text-xs font-bold text-activa">Lista para producir</div>
               <div className="text-[10px] text-text-tertiary font-mono truncate">
-                {preparadaHoy.hora.slice(0, 5)} · {getName(preparadaHoy.trabajador_id)}
+                Preparada {listaParaUsar.hora.slice(0, 5)} · {getName(listaParaUsar.trabajador_id)}
               </div>
             </div>
           </div>
         ) : (
-          <div className="mb-2 px-3 py-2 rounded-lg bg-surface-3 border border-border-subtle flex items-center gap-2">
-            <span className="text-lg opacity-60">🧹</span>
+          <div className="mb-2 px-3 py-2 rounded-lg bg-parada/10 border border-parada/30 flex items-center gap-2">
+            <span className="text-lg">🧹</span>
             <div className="flex-1 min-w-0 leading-tight">
-              <div className="text-xs font-semibold text-text-secondary">Sin preparar hoy</div>
-              <div className="text-[10px] text-text-tertiary">Haz primero la preparación</div>
+              <div className="text-xs font-bold text-parada">Necesita preparación</div>
+              <div className="text-[10px] text-text-tertiary">Prepara antes de producir</div>
             </div>
           </div>
         )

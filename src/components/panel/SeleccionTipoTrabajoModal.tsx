@@ -5,6 +5,8 @@ interface Props {
   open: boolean
   onClose: () => void
   maquina: Maquina
+  /** La máquina necesita preparación antes de iniciar producción */
+  needsPrep: boolean
   onSelectProduccion: () => void
   onSelectMantenimiento: () => void
   onSelectPreparacion: () => void
@@ -13,7 +15,11 @@ interface Props {
 
 /**
  * Modal selector: when a worker taps a free machine, they choose between
- * Production, Preparation, Maintenance, or report a Breakdown.
+ * Preparation, Production, Maintenance, or report a Breakdown.
+ *
+ * El flujo es estricto: Preparación → Producción → Cierre → Preparación…
+ * Si la máquina no se ha preparado después del último cierre, Producción
+ * queda deshabilitada hasta que alguien la prepare.
  *
  * Touch-first: large cards (56px+ height), industrial premium dark theme.
  */
@@ -21,6 +27,7 @@ export default function SeleccionTipoTrabajoModal({
   open,
   onClose,
   maquina,
+  needsPrep,
   onSelectProduccion,
   onSelectMantenimiento,
   onSelectPreparacion,
@@ -32,9 +39,23 @@ export default function SeleccionTipoTrabajoModal({
         <h3 className="text-xl font-bold text-text-primary mb-1">
           ¿Qué vas a hacer?
         </h3>
-        <p className="text-sm text-text-tertiary mb-6">
+        <p className="text-sm text-text-tertiary mb-4">
           Elige el tipo de trabajo que vas a realizar en esta máquina.
         </p>
+
+        {/* Banner informativo si hay que preparar primero */}
+        {needsPrep && (
+          <div className="mb-5 px-4 py-3 rounded-lg bg-activa/10 border border-activa/30 flex items-start gap-3">
+            <span className="text-2xl leading-none">🧹</span>
+            <div className="flex-1 leading-snug">
+              <div className="text-sm font-bold text-activa">Primero hay que preparar</div>
+              <div className="text-xs text-text-secondary mt-0.5">
+                Esta máquina necesita preparación antes de iniciar una nueva producción.
+                Pulsa el botón verde "Preparación" para empezar.
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Preparation card — primero: el proceso previo */}
@@ -61,26 +82,31 @@ export default function SeleccionTipoTrabajoModal({
             </div>
           </button>
 
-          {/* Production card — segundo: el trabajo */}
+          {/* Production card — segundo: el trabajo (deshabilitado si falta prep) */}
           <button
             onClick={onSelectProduccion}
-            className="
+            disabled={needsPrep}
+            className={`
               group relative flex flex-col items-center justify-center gap-3
               min-h-[140px] p-6 rounded-2xl border-2
-              bg-primary/5 border-primary/30
-              hover:bg-primary/10 hover:border-primary/60
-              active:scale-[0.97] transition-all
-            "
+              ${needsPrep
+                ? 'bg-surface-3 border-border-subtle opacity-40 cursor-not-allowed'
+                : 'bg-primary/5 border-primary/30 hover:bg-primary/10 hover:border-primary/60 active:scale-[0.97]'
+              }
+              transition-all
+            `}
           >
-            <div className="w-14 h-14 rounded-xl bg-primary/15 flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D09A40" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${needsPrep ? 'bg-surface-4' : 'bg-primary/15'}`}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={needsPrep ? '#555' : '#D09A40'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-primary">Producción</div>
-              <div className="text-xs text-text-tertiary mt-1">Iniciar un trabajo</div>
+              <div className={`text-lg font-bold ${needsPrep ? 'text-text-tertiary' : 'text-primary'}`}>Producción</div>
+              <div className="text-xs text-text-tertiary mt-1">
+                {needsPrep ? 'Prepara primero' : 'Iniciar un trabajo'}
+              </div>
             </div>
           </button>
 
