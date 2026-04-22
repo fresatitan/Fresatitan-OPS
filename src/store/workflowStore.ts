@@ -14,6 +14,7 @@ import type {
   TipoMaquina,
   SeveridadAveria,
   AveriaDocumento,
+  Preparacion,
 } from '../types/database'
 
 // =============================================================================
@@ -104,6 +105,7 @@ interface WorkflowState {
   mantenimientos: Mantenimiento[]
   estadosHistorial: MaquinaEstado[]
   averiaDocumentos: AveriaDocumento[]
+  preparaciones: Preparacion[]
 
   loading: boolean
   error: string | null
@@ -120,6 +122,9 @@ interface WorkflowState {
 
   // Mantenimientos
   registrarMantenimiento: (input: NuevoMantenimientoInput) => Promise<string | null>
+
+  // Preparaciones — registro de limpieza puntual
+  registrarPreparacion: (input: { maquinaId: string; trabajadorId: string | null; observaciones?: string | null }) => Promise<string | null>
 
   // Maquinas CRUD (solo admin, desde /maquinas)
   addMaquina: (data: Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_preparacion' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion'>) => Promise<void>
@@ -153,6 +158,8 @@ interface WorkflowState {
   getDocumentosByAveria: (maquinaEstadoId: string) => AveriaDocumento[]
   /** Fuerza recarga de averia_documentos desde Supabase (tras subir uno nuevo) */
   refetchAveriaDocumentos: () => Promise<void>
+  /** Última preparación registrada de una máquina (la más reciente, si hay) */
+  getUltimaPreparacion: (maquinaId: string) => Preparacion | null
 }
 
 // -----------------------------------------------------------------------------
@@ -165,6 +172,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   mantenimientos: [],
   estadosHistorial: [],
   averiaDocumentos: [],
+  preparaciones: [],
 
   loading: false,
   error: null,
@@ -186,6 +194,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         mantenimientos: [],
         estadosHistorial: [],
         averiaDocumentos: [],
+        preparaciones: [],
         loading: false,
         initialized: true,
       })
@@ -193,13 +202,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
 
     try {
-      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes, docsRes] = await Promise.all([
+      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes, docsRes, prepsRes] = await Promise.all([
         supabase.from('maquinas').select('*').order('codigo'),
         supabase.from('usos_equipo').select('*').order('created_at', { ascending: false }),
         supabase.from('incidencias').select('*').order('created_at', { ascending: false }),
         supabase.from('mantenimientos').select('*').order('fecha', { ascending: false }),
         supabase.from('maquina_estados').select('*').order('timestamp', { ascending: false }).limit(500),
         supabase.from('averia_documentos').select('*').order('subido_en', { ascending: false }),
+        supabase.from('preparaciones').select('*').order('fecha', { ascending: false }).order('hora', { ascending: false }).limit(500),
       ])
 
       if (maquinasRes.error) throw maquinasRes.error
@@ -208,6 +218,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       if (mantRes.error) throw mantRes.error
       if (estadosRes.error) throw estadosRes.error
       if (docsRes.error) throw docsRes.error
+      if (prepsRes.error) throw prepsRes.error
 
       set({
         maquinas: (maquinasRes.data ?? []) as Maquina[],
@@ -216,6 +227,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         mantenimientos: (mantRes.data ?? []) as Mantenimiento[],
         estadosHistorial: (estadosRes.data ?? []) as MaquinaEstado[],
         averiaDocumentos: (docsRes.data ?? []) as AveriaDocumento[],
+        preparaciones: (prepsRes.data ?? []) as Preparacion[],
         loading: false,
         initialized: true,
       })
@@ -296,6 +308,17 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           .order('subido_en', { ascending: false })
           .then(({ data }) => {
             if (data) set({ averiaDocumentos: data as AveriaDocumento[] })
+          })
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'preparaciones' }, () => {
+        supabase!
+          .from('preparaciones')
+          .select('*')
+          .order('fecha', { ascending: false })
+          .order('hora', { ascending: false })
+          .limit(500)
+          .then(({ data }) => {
+            if (data) set({ preparaciones: data as Preparacion[] })
           })
       })
       .subscribe()
@@ -686,6 +709,39 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
   },
 
+  registrarPreparacion: async ({ maquinaId, trabajadorId, observaciones }) => {
+    const fecha = todayDate()
+    const hora = nowTime() + ':00'
+    const payload = {
+      maquina_id: maquinaId,
+      trabajador_id: toValidUuid(trabajadorId),
+      fecha,
+      hora,
+      observaciones: observaciones?.trim() || null,
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      const id = newLocalId('p')
+      const nowIso = new Date().toISOString()
+      const prep: Preparacion = { id, ...payload, created_at: nowIso }
+      set((s) => ({ preparaciones: [prep, ...s.preparaciones] }))
+      return id
+    }
+
+    const { data, error } = await supabase
+      .from('preparaciones')
+      .insert(payload)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[registrarPreparacion] error:', error)
+      set({ error: error.message })
+      return null
+    }
+    return (data?.id as string | undefined) ?? null
+  },
+
   resolverAveria: async ({
     maquinaId,
     adminId,
@@ -777,4 +833,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   getDocumentosByAveria: (maquinaEstadoId) =>
     get().averiaDocumentos.filter((d) => d.maquina_estado_id === maquinaEstadoId),
+
+  getUltimaPreparacion: (maquinaId) =>
+    get().preparaciones.find((p) => p.maquina_id === maquinaId) ?? null,
 }))

@@ -114,6 +114,17 @@ export interface Alerta {
   created_at: string
 }
 
+// Preparación/limpieza puntual de una máquina. Evento de log — no cambia estado.
+export interface Preparacion {
+  id: string
+  maquina_id: string
+  trabajador_id: string | null
+  fecha: string            // ISO date (YYYY-MM-DD)
+  hora: string             // HH:mm:ss
+  observaciones: string | null
+  created_at: string
+}
+
 // Estructura compatible con supabase-js v2 generic Database type
 type TableDef<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Row: Row
@@ -133,6 +144,7 @@ export interface Database {
       mantenimientos: TableDef<Mantenimiento, Omit<Mantenimiento, 'id' | 'created_at' | 'updated_at'>, Partial<Omit<Mantenimiento, 'id'>>>
       alertas: TableDef<Alerta, Omit<Alerta, 'id' | 'created_at'>, Partial<Omit<Alerta, 'id'>>>
       averia_documentos: TableDef<AveriaDocumento, Omit<AveriaDocumento, 'id' | 'subido_en'>, Partial<Omit<AveriaDocumento, 'id'>>>
+      preparaciones: TableDef<Preparacion, Omit<Preparacion, 'id' | 'created_at'>, Partial<Omit<Preparacion, 'id'>>>
     }
     Views: Record<string, never>
     Functions: Record<string, never>

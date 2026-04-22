@@ -19,6 +19,7 @@ interface Props {
 export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props) {
   const usos = useWorkflowStore((s) => s.usos)
   const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
+  const getUltimaPreparacion = useWorkflowStore((s) => s.getUltimaPreparacion)
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
 
   const activeUso = usos.find((u) => u.maquina_id === maquina.id && u.resultado === 'pendiente') ?? null
@@ -40,6 +41,11 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
       !e.cerrada_en &&
       maquina.estado_actual !== 'avería', // si está bloqueada ya no es "pendiente"
   )
+
+  // Preparación vigente (la última, si fue hoy)
+  const ultimaPrep = getUltimaPreparacion(maquina.id)
+  const today = new Date().toISOString().slice(0, 10)
+  const preparadaHoy = ultimaPrep && ultimaPrep.fecha === today ? ultimaPrep : null
 
   return (
     <>
@@ -86,6 +92,19 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
 
         {/* Active uso indicator */}
         {activeUso && <ActiveUsoBar maquina={maquina} uso={activeUso} onFinish={() => setShowCerrar(true)} />}
+
+        {/* Badge de preparación de hoy */}
+        {preparadaHoy && (
+          <div className="px-4 py-1.5 bg-activa/10 border-b border-activa/20 flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase text-activa">
+              <span>🧹</span>
+              <span>Preparada hoy</span>
+            </span>
+            <span className="text-[10px] font-mono text-activa/80">
+              {formatTime(preparadaHoy.hora)} · {getName(preparadaHoy.trabajador_id)}
+            </span>
+          </div>
+        )}
 
         {/* Zona central informativa (crece para mantener altura homogénea) */}
         <div className="flex-1 px-4 py-3 flex flex-col justify-center">

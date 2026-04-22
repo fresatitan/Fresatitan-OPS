@@ -7,6 +7,7 @@ import NuevoUsoModal from '../components/maquinas/NuevoUsoModal'
 import CerrarUsoModal from '../components/maquinas/CerrarUsoModal'
 import SeleccionTipoTrabajoModal from '../components/panel/SeleccionTipoTrabajoModal'
 import StartMantenimientoModal from '../components/panel/StartMantenimientoModal'
+import StartPreparacionModal from '../components/panel/StartPreparacionModal'
 import { TIPOS_MAQUINA, TIPOS_MAQUINA_PLURAL } from '../constants/estados'
 import type { Maquina, TipoMaquina, UsoEquipo } from '../types/database'
 
@@ -34,6 +35,7 @@ export default function Panel() {
   const [selectorFor, setSelectorFor] = useState<Maquina | null>(null)
   const [nuevoFor, setNuevoFor] = useState<Maquina | null>(null)
   const [mantFor, setMantFor] = useState<Maquina | null>(null)
+  const [prepFor, setPrepFor] = useState<Maquina | null>(null)
   const [cerrarFor, setCerrarFor] = useState<{ maquina: Maquina; uso: UsoEquipo } | null>(null)
   // When user picks "Reportar avería" from the selector, open NuevoUsoModal in avería mode
   const [averiaFor, setAveriaFor] = useState<Maquina | null>(null)
@@ -69,6 +71,12 @@ export default function Panel() {
     const m = selectorFor
     setSelectorFor(null)
     if (m) setMantFor(m)
+  }
+
+  const handleSelectPreparacion = () => {
+    const m = selectorFor
+    setSelectorFor(null)
+    if (m) setPrepFor(m)
   }
 
   const handleSelectAveria = () => {
@@ -118,6 +126,7 @@ export default function Panel() {
           maquina={selectorFor}
           onSelectProduccion={handleSelectProduccion}
           onSelectMantenimiento={handleSelectMantenimiento}
+          onSelectPreparacion={handleSelectPreparacion}
           onSelectAveria={handleSelectAveria}
         />
       )}
@@ -129,6 +138,9 @@ export default function Panel() {
       )}
       {mantFor && (
         <StartMantenimientoModal open={!!mantFor} onClose={() => setMantFor(null)} maquina={mantFor} />
+      )}
+      {prepFor && (
+        <StartPreparacionModal open={!!prepFor} onClose={() => setPrepFor(null)} maquina={prepFor} />
       )}
       {cerrarFor && (
         <CerrarUsoModal

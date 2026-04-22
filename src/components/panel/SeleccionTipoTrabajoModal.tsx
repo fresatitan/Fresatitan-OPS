@@ -7,12 +7,13 @@ interface Props {
   maquina: Maquina
   onSelectProduccion: () => void
   onSelectMantenimiento: () => void
+  onSelectPreparacion: () => void
   onSelectAveria: () => void
 }
 
 /**
  * Modal selector: when a worker taps a free machine, they choose between
- * Production, Maintenance, or report a Breakdown.
+ * Production, Preparation, Maintenance, or report a Breakdown.
  *
  * Touch-first: large cards (56px+ height), industrial premium dark theme.
  */
@@ -22,6 +23,7 @@ export default function SeleccionTipoTrabajoModal({
   maquina,
   onSelectProduccion,
   onSelectMantenimiento,
+  onSelectPreparacion,
   onSelectAveria,
 }: Props) {
   return (
@@ -34,7 +36,7 @@ export default function SeleccionTipoTrabajoModal({
           Elige el tipo de trabajo que vas a realizar en esta máquina.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Production card */}
           <button
             onClick={onSelectProduccion}
@@ -54,7 +56,31 @@ export default function SeleccionTipoTrabajoModal({
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-primary">Producción</div>
-              <div className="text-xs text-text-tertiary mt-1">Iniciar un trabajo de producción</div>
+              <div className="text-xs text-text-tertiary mt-1">Iniciar un trabajo</div>
+            </div>
+          </button>
+
+          {/* Preparation card */}
+          <button
+            onClick={onSelectPreparacion}
+            className="
+              group relative flex flex-col items-center justify-center gap-3
+              min-h-[140px] p-6 rounded-2xl border-2
+              bg-activa/5 border-activa/30
+              hover:bg-activa/10 hover:border-activa/60
+              active:scale-[0.97] transition-all
+            "
+          >
+            <div className="w-14 h-14 rounded-xl bg-activa/15 flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16v4H4z" />
+                <path d="M6 8v12h12V8" />
+                <path d="M10 14l2 2 4-4" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-activa">Preparación</div>
+              <div className="text-xs text-text-tertiary mt-1">Limpiar / acondicionar</div>
             </div>
           </button>
 
@@ -76,7 +102,7 @@ export default function SeleccionTipoTrabajoModal({
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-mantenimiento">Mantenimiento</div>
-              <div className="text-xs text-text-tertiary mt-1">Registrar una intervención técnica</div>
+              <div className="text-xs text-text-tertiary mt-1">Intervención técnica</div>
             </div>
           </button>
         </div>
