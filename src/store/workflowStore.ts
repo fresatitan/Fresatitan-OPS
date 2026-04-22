@@ -15,6 +15,7 @@ import type {
   SeveridadAveria,
   AveriaDocumento,
   Preparacion,
+  TipoProceso,
 } from '../types/database'
 
 // =============================================================================
@@ -74,6 +75,7 @@ export interface IniciarUsoInput {
   tecnico_preparacion_id: string | null
   tecnico_lanzamiento_id?: string | null
   observaciones?: string | null
+  tipo_proceso?: TipoProceso | null
 }
 
 export interface CerrarUsoInput {
@@ -342,6 +344,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       tecnico_acabado_id: null,
       resultado: 'pendiente' as const,
       observaciones: input.observaciones ?? null,
+      tipo_proceso: input.tipo_proceso ?? null,
     }
 
     if (!isSupabaseConfigured || !supabase) {

@@ -3,7 +3,8 @@ import Modal from '../ui/Modal'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
-import type { Maquina, SeveridadAveria } from '../../types/database'
+import { PROCESOS_POR_TIPO, TIPOS_PROCESO } from '../../constants/estados'
+import type { Maquina, SeveridadAveria, TipoProceso } from '../../types/database'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -18,13 +19,15 @@ const nowTime = () => {
 }
 const todayDate = () => new Date().toISOString().slice(0, 10)
 
-type Step = 'preparacion' | 'lanzamiento' | 'confirmar' | 'averia'
+type Step = 'tecnico' | 'lanzamiento' | 'proceso' | 'confirmar' | 'averia'
+type FlowStep = Exclude<Step, 'averia'>
 
 /**
  * Flujo rediseñado para trabajadores no-técnicos:
- *  1. "¿Quién prepara?"  → grid grande de avatares
- *  2. (opcional) "¿Quién lanza?" → si la máquina lo requiere
- *  3. Confirmación visual con resumen y botón "Empezar ahora"
+ *   1. ¿Quién va a usar la máquina? (siempre)
+ *   2. (opcional) ¿Quién lanza? — solo si la máquina requiere lanzamiento
+ *   3. ¿Qué proceso vas a hacer? — fresado, sinterizado, etc. (filtrado por tipo)
+ *   4. Confirmación visual con resumen y botón "Empezar ahora"
  *
  * Fecha y hora se auto-rellenan con ahora. Están ocultas tras un "Ajustar datos"
  * para cuando un admin necesita corregir un registro pasado.
@@ -35,10 +38,12 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   const trabajadores = useTrabajadoresStore((s) => s.trabajadores)
   const candidatos = trabajadores.filter((t) => t.activo && t.puede_operar)
 
-  const initialStep: Step = maquina.requiere_preparacion ? 'preparacion' : 'confirmar'
-  const [step, setStep] = useState<Step>(initialStep)
-  const [tecnicoPrep, setTecnicoPrep] = useState<Trabajador | null>(null)
+  const procesosDisponibles = PROCESOS_POR_TIPO[maquina.tipo]
+
+  const [step, setStep] = useState<Step>('tecnico')
+  const [tecnico, setTecnico] = useState<Trabajador | null>(null)
   const [tecnicoLanz, setTecnicoLanz] = useState<Trabajador | null>(null)
+  const [tipoProceso, setTipoProceso] = useState<TipoProceso | null>(null)
   const [showAjustes, setShowAjustes] = useState(false)
   const [fecha, setFecha] = useState(todayDate())
   const [hora, setHora] = useState(nowTime())
@@ -46,12 +51,14 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   const [averiaMotivo, setAveriaMotivo] = useState('')
   const [averiaTecnico, setAveriaTecnico] = useState<Trabajador | null>(null)
   const [averiaSeveridad, setAveriaSeveridad] = useState<SeveridadAveria>('critica')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (open) {
-      setStep(maquina.requiere_preparacion ? 'preparacion' : 'confirmar')
-      setTecnicoPrep(null)
+      setStep('tecnico')
+      setTecnico(null)
       setTecnicoLanz(null)
+      setTipoProceso(null)
       setShowAjustes(false)
       setFecha(todayDate())
       setHora(nowTime())
@@ -59,8 +66,9 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
       setAveriaMotivo('')
       setAveriaTecnico(null)
       setAveriaSeveridad('critica')
+      setSubmitting(false)
     }
-  }, [open, maquina.requiere_preparacion])
+  }, [open])
 
   const handleReportarAveria = async () => {
     if (!averiaMotivo.trim()) return
@@ -74,51 +82,54 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
     onClose()
   }
 
-  // Avanzar automáticamente cuando se elige técnico
-  const handleSelectPrep = (t: Trabajador) => {
-    setTecnicoPrep(t)
-    // salto automático al siguiente paso
+  // Cuando se elige técnico principal, avanza al siguiente paso
+  const handleSelectTecnico = (t: Trabajador) => {
+    setTecnico(t)
     setTimeout(() => {
-      setStep(maquina.requiere_lanzamiento ? 'lanzamiento' : 'confirmar')
+      setStep(maquina.requiere_lanzamiento ? 'lanzamiento' : 'proceso')
     }, 150)
   }
 
   const handleSelectLanz = (t: Trabajador) => {
     setTecnicoLanz(t)
+    setTimeout(() => setStep('proceso'), 150)
+  }
+
+  const handleSelectProceso = (p: TipoProceso) => {
+    setTipoProceso(p)
     setTimeout(() => setStep('confirmar'), 150)
   }
 
-  const [submitting, setSubmitting] = useState(false)
-
   const handleConfirmar = async () => {
-    if (maquina.requiere_preparacion && !tecnicoPrep) return
+    if (!tecnico) return
     if (maquina.requiere_lanzamiento && !tecnicoLanz) return
+    if (!tipoProceso) return
     setSubmitting(true)
     const id = await iniciarUso({
       maquina_id: maquina.id,
       fecha,
       hora_preparacion: hora,
-      tecnico_preparacion_id: tecnicoPrep?.id ?? null,
+      tecnico_preparacion_id: tecnico.id,
       tecnico_lanzamiento_id: tecnicoLanz?.id ?? null,
       observaciones: observaciones.trim() || null,
+      tipo_proceso: tipoProceso,
     })
     setSubmitting(false)
     if (!id) {
       toast.error('No se pudo iniciar el uso')
       return
     }
-    toast.success(`${maquina.codigo} en marcha`, { icon: '✓' })
+    toast.success(`${maquina.codigo} en marcha · ${TIPOS_PROCESO[tipoProceso].label}`, { icon: '✓' })
     onClose()
   }
 
   const handleBack = () => {
     if (step === 'confirmar') {
-      if (maquina.requiere_lanzamiento) setStep('lanzamiento')
-      else if (maquina.requiere_preparacion) setStep('preparacion')
-      // Si no requiere ni preparación ni lanzamiento, no hay paso anterior
+      setStep('proceso')
+    } else if (step === 'proceso') {
+      setStep(maquina.requiere_lanzamiento ? 'lanzamiento' : 'tecnico')
     } else if (step === 'lanzamiento') {
-      setTecnicoLanz(null)
-      if (maquina.requiere_preparacion) setStep('preparacion')
+      setStep('tecnico')
     }
   }
 
@@ -138,11 +149,10 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
           </div>
         )}
 
-        {/* Progreso en pasos (solo en flujo de uso normal, y solo si hay más de 1 paso) */}
-        {step !== 'averia' && (maquina.requiere_preparacion || maquina.requiere_lanzamiento) && (
+        {/* Progreso en pasos */}
+        {step !== 'averia' && (
           <StepIndicator
-            current={step as 'preparacion' | 'lanzamiento' | 'confirmar'}
-            requierePreparacion={maquina.requiere_preparacion}
+            current={step as FlowStep}
             requiereLanzamiento={maquina.requiere_lanzamiento}
           />
         )}
@@ -170,7 +180,6 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
                 />
               </div>
 
-              {/* Propuesta de severidad */}
               <div>
                 <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">
                   ¿Cómo de grave es? <span className="normal-case text-text-tertiary">(tu propuesta, el admin decide)</span>
@@ -201,7 +210,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
                 Enviar aviso al admin
               </button>
               <button
-                onClick={() => setStep('preparacion')}
+                onClick={() => setStep('tecnico')}
                 className="w-full text-center text-xs text-text-tertiary hover:text-text-secondary transition-colors"
               >
                 Volver al uso normal
@@ -210,43 +219,75 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
           </StepContent>
         )}
 
-        {/* Paso 1: ¿Quién prepara? */}
-        {step === 'preparacion' && (
+        {/* Paso 1: ¿Quién va a usar la máquina? */}
+        {step === 'tecnico' && (
           <StepContent
-            title="¿Quién prepara la máquina?"
-            subtitle="Toca a la persona que está poniendo el trabajo en la máquina."
+            title="¿Quién va a usar la máquina?"
+            subtitle="Toca a la persona que va a operar la máquina."
           >
-            <TrabajadorGrid candidatos={candidatos} selected={tecnicoPrep?.id ?? null} onSelect={handleSelectPrep} />
+            <TrabajadorGrid candidatos={candidatos} selected={tecnico?.id ?? null} onSelect={handleSelectTecnico} />
           </StepContent>
         )}
 
-        {/* Paso 2: ¿Quién lanza? */}
+        {/* Paso 2 (opcional): ¿Quién lanza? */}
         {step === 'lanzamiento' && (
           <StepContent
             title="¿Quién lanza la máquina?"
-            subtitle={`Esta máquina necesita que alguien pulse START después de preparar. Puede ser la misma persona que ${tecnicoPrep?.nombre}.`}
+            subtitle={`Esta máquina necesita que alguien pulse START después de preparar. Puede ser la misma persona que ${tecnico?.nombre}.`}
           >
             <TrabajadorGrid candidatos={candidatos} selected={tecnicoLanz?.id ?? null} onSelect={handleSelectLanz} />
           </StepContent>
         )}
 
-        {/* Paso Confirmar / Producción directa */}
-        {step === 'confirmar' && (
+        {/* Paso 3: ¿Qué proceso vas a hacer? */}
+        {step === 'proceso' && (
           <StepContent
-            title={maquina.requiere_preparacion ? '¿Empezamos?' : `Iniciar ${maquina.codigo}`}
-            subtitle={maquina.requiere_preparacion ? 'Revisa que todo esté bien y pulsa el botón.' : 'Pulsa para poner la máquina en marcha.'}
+            title="¿Qué proceso vas a hacer?"
+            subtitle="Elige el tipo de trabajo que vas a realizar en esta máquina."
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {procesosDisponibles.map((p) => {
+                const meta = TIPOS_PROCESO[p]
+                const isSelected = tipoProceso === p
+                return (
+                  <button
+                    key={p}
+                    onClick={() => handleSelectProceso(p)}
+                    className={`
+                      flex flex-col items-center justify-center gap-2 p-4 min-h-[100px]
+                      rounded-xl border-2 transition-all active:scale-[0.96]
+                      ${isSelected
+                        ? 'bg-primary-muted border-primary'
+                        : 'bg-surface-2 border-border-subtle hover:border-primary/40 hover:bg-surface-3'
+                      }
+                    `}
+                  >
+                    <span className="text-3xl text-primary">{meta.icon}</span>
+                    <span className={`text-sm font-semibold text-center ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
+                      {meta.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </StepContent>
+        )}
+
+        {/* Paso Confirmar */}
+        {step === 'confirmar' && tecnico && tipoProceso && (
+          <StepContent
+            title="¿Empezamos?"
+            subtitle="Revisa que todo esté bien y pulsa el botón para poner la máquina en marcha."
           >
             <div className="bg-surface-3 border border-border-subtle rounded-xl p-4 space-y-3">
-              {tecnicoPrep && (
-                <SummaryRow icon="🛠️" label="Prepara" trabajador={tecnicoPrep} />
-              )}
+              <SummaryRow icon="👤" label="Técnico" trabajador={tecnico} />
               {maquina.requiere_lanzamiento && tecnicoLanz && (
                 <SummaryRow icon="▶" label="Lanza" trabajador={tecnicoLanz} />
               )}
+              <SummaryRow icon={TIPOS_PROCESO[tipoProceso].icon} label="Proceso" value={TIPOS_PROCESO[tipoProceso].label} />
               <SummaryRow icon="🕐" label="Hora" value={hora} />
             </div>
 
-            {/* Ajustes ocultos */}
             {!showAjustes ? (
               <button
                 onClick={() => setShowAjustes(true)}
@@ -299,8 +340,8 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
           </StepContent>
         )}
 
-        {/* Navegación inferior (solo si hay un paso anterior al que volver) */}
-        {step !== 'averia' && (step === 'lanzamiento' || (step === 'confirmar' && (maquina.requiere_preparacion || maquina.requiere_lanzamiento))) && (
+        {/* Navegación inferior — en todo paso salvo el primero */}
+        {step !== 'averia' && step !== 'tecnico' && (
           <div className="mt-5 pt-4 border-t border-border-subtle flex items-center justify-between">
             <button
               onClick={handleBack}
@@ -325,12 +366,11 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
 // Sub-componentes
 // =============================================================================
 
-type FlowStep = 'preparacion' | 'lanzamiento' | 'confirmar'
-
-function StepIndicator({ current, requierePreparacion, requiereLanzamiento }: { current: FlowStep; requierePreparacion: boolean; requiereLanzamiento: boolean }) {
+function StepIndicator({ current, requiereLanzamiento }: { current: FlowStep; requiereLanzamiento: boolean }) {
   const steps: FlowStep[] = [
-    ...(requierePreparacion ? ['preparacion' as FlowStep] : []),
+    'tecnico',
     ...(requiereLanzamiento ? ['lanzamiento' as FlowStep] : []),
+    'proceso',
     'confirmar',
   ]
   const currentIdx = steps.indexOf(current)

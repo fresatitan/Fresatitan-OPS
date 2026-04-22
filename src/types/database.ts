@@ -7,6 +7,14 @@ export type ResultadoUso = 'ok' | 'ko' | 'pendiente'
 export type TipoMantenimiento = 'preventivo' | 'correctivo' | 'predictivo'
 export type SeveridadAveria = 'critica' | 'leve'
 export type TipoDocumentoAveria = 'parte_tecnico' | 'factura' | 'foto' | 'otro'
+export type TipoProceso =
+  | 'fresado'
+  | 'sinterizado'
+  | 'sinterofresado'
+  | 'impresion3d'
+  | 'ferulas'
+  | 'blender'
+  | 'otro'
 
 export interface Profile {
   id: string
@@ -78,6 +86,7 @@ export interface UsoEquipo {
   tecnico_acabado_id: string | null
   resultado: ResultadoUso
   observaciones: string | null
+  tipo_proceso: TipoProceso | null         // qué se está haciendo (fresado, sinterizado, ...)
   created_at: string
   updated_at: string
 }

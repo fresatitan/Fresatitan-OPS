@@ -1,4 +1,4 @@
-import type { EstadoMaquina, RolUsuario, TipoMaquina, ResultadoUso, TipoMantenimiento, SeveridadAveria } from '../types/database'
+import type { EstadoMaquina, RolUsuario, TipoMaquina, ResultadoUso, TipoMantenimiento, SeveridadAveria, TipoProceso } from '../types/database'
 
 export const ESTADOS_MAQUINA: Record<EstadoMaquina, { label: string; color: string; bg: string }> = {
   activa: { label: 'En uso', color: 'text-activa', bg: 'bg-activa' },
@@ -51,4 +51,21 @@ export const SEVERIDADES: Record<SeveridadAveria, { label: string; short: string
     short: 'LEVE',
     description: 'Hay algo raro pero la máquina se puede seguir usando.',
   },
+}
+
+export const TIPOS_PROCESO: Record<TipoProceso, { label: string; icon: string }> = {
+  fresado:         { label: 'Fresado',         icon: '⚙' },
+  sinterizado:     { label: 'Sinterizado',     icon: '◎' },
+  sinterofresado:  { label: 'Sinterofresado',  icon: '◈' },
+  impresion3d:     { label: 'Impresión 3D',    icon: '⎙' },
+  ferulas:         { label: 'Férulas',         icon: '⬢' },
+  blender:         { label: 'Blender',         icon: '⬡' },
+  otro:            { label: 'Otro',            icon: '◇' },
+}
+
+// Qué procesos tienen sentido por familia de máquina. El selector los filtra.
+export const PROCESOS_POR_TIPO: Record<TipoMaquina, TipoProceso[]> = {
+  fresadora:     ['fresado', 'ferulas', 'blender', 'otro'],
+  sinterizadora: ['sinterizado', 'sinterofresado', 'otro'],
+  impresora_3d:  ['impresion3d', 'otro'],
 }

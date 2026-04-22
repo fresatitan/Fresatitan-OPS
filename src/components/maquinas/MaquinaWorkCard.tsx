@@ -4,6 +4,7 @@ import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore } from '../../store/trabajadoresStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
 import { toIsoDateTime, formatTime } from '../../lib/utils'
+import { TIPOS_PROCESO } from '../../constants/estados'
 import NuevoUsoModal from './NuevoUsoModal'
 import CerrarUsoModal from './CerrarUsoModal'
 import type { Maquina } from '../../types/database'
@@ -118,8 +119,14 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
               </div>
               <div className="space-y-1">
                 <InfoRow label="Fecha" value={lastUso.fecha} mono />
+                {lastUso.tipo_proceso && (
+                  <InfoRow
+                    label="Proceso"
+                    value={`${TIPOS_PROCESO[lastUso.tipo_proceso].icon} ${TIPOS_PROCESO[lastUso.tipo_proceso].label}`}
+                  />
+                )}
                 <InfoRow
-                  label="Preparación"
+                  label="Técnico"
                   value={`${formatTime(lastUso.hora_preparacion)} · ${getName(lastUso.tecnico_preparacion_id)}`}
                   highlight
                 />
@@ -209,7 +216,13 @@ function ActiveUsoBar({
   onFinish,
 }: {
   maquina: Maquina
-  uso: { fecha: string; hora_preparacion: string; tecnico_preparacion_id: string | null; tecnico_lanzamiento_id: string | null }
+  uso: {
+    fecha: string
+    hora_preparacion: string
+    tecnico_preparacion_id: string | null
+    tecnico_lanzamiento_id: string | null
+    tipo_proceso: import('../../types/database').TipoProceso | null
+  }
   onFinish: () => void
 }) {
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
@@ -225,9 +238,17 @@ function ActiveUsoBar({
         <span className="font-mono text-xs text-activa tabular-nums shrink-0">{elapsed}</span>
       </div>
       <div className="mt-1.5 space-y-0.5">
+        {uso.tipo_proceso && (
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="text-text-tertiary">Proceso</span>
+            <span className="text-text-primary font-medium">
+              {TIPOS_PROCESO[uso.tipo_proceso].icon} {TIPOS_PROCESO[uso.tipo_proceso].label}
+            </span>
+          </div>
+        )}
         {uso.tecnico_preparacion_id && (
           <div className="flex items-center justify-between text-[10px]">
-            <span className="text-text-tertiary">Prep.</span>
+            <span className="text-text-tertiary">Técnico</span>
             <span className="text-text-secondary">{formatTime(uso.hora_preparacion)} · {getName(uso.tecnico_preparacion_id)}</span>
           </div>
         )}
