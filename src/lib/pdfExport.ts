@@ -8,8 +8,10 @@ import type {
   MaquinaEstado,
   AveriaDocumento,
   SeveridadAveria,
+  Preparacion,
+  TipoProceso,
 } from '../types/database'
-import { formatTime } from './utils'
+import { formatTime, preparacionPreviaDe } from './utils'
 
 const TIPO_LABEL_UPPER: Record<TipoMaquina, string> = {
   fresadora: 'FRESADORA',
@@ -21,6 +23,16 @@ const TIPO_LABEL: Record<TipoMaquina, string> = {
   fresadora: 'Fresadora',
   sinterizadora: 'Sinterizadora',
   impresora_3d: 'Impresora 3D',
+}
+
+const PROCESO_LABEL: Record<TipoProceso, string> = {
+  fresado: 'Fresado',
+  sinterizado: 'Sinterizado',
+  sinterofresado: 'Sinterofresado',
+  impresion3d: 'Impresión 3D',
+  ferulas: 'Férulas',
+  blender: 'Blender',
+  otro: 'Otro',
 }
 
 // =============================================================================
@@ -40,6 +52,7 @@ export interface PdfExportData {
   usos: UsoEquipo[]
   incidencias: Incidencia[]
   mantenimientos: Mantenimiento[]
+  preparaciones?: Preparacion[]
   getName: (id: string | null) => string
   desde: string
   hasta: string
@@ -50,7 +63,7 @@ export interface PdfExportData {
 // -----------------------------------------------------------------------------
 // FORMATO A — Tabla por máquina
 // -----------------------------------------------------------------------------
-export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, mantenimientos, getName, desde, hasta, selectedMaquina }: PdfExportData) {
+export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, mantenimientos, preparaciones = [], getName, desde, hasta, selectedMaquina }: PdfExportData) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -104,12 +117,13 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, mantenim
     // Build columns depending on machine capabilities
     const colTitulos: string[] = ['Fecha']
     if (maquina.requiere_preparacion) {
-      colTitulos.push('Hora prep.', 'Técnico prep.')
+      colTitulos.push('Preparó')
     }
+    colTitulos.push('Proceso', 'Hora inicio', 'Téc. proceso')
     if (maquina.requiere_lanzamiento) {
-      colTitulos.push('Lanz. (hora)', 'Téc. lanz.')
+      colTitulos.push('Téc. lanz.')
     }
-    colTitulos.push('Hora acab.', 'Téc. acab.', 'Result.', 'Incidencias', 'Observaciones')
+    colTitulos.push('Hora fin', 'Téc. cierre', 'Result.', 'Incidencias', 'Observaciones')
 
     // Calculate column positions dynamically
     const colX = buildColumnPositions(marginX, pageWidth - marginX * 2, colTitulos.length)
@@ -142,11 +156,13 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, mantenim
 
       const values: string[] = [u.fecha]
       if (maquina.requiere_preparacion) {
-        values.push(formatTime(u.hora_preparacion))
-        values.push(getName(u.tecnico_preparacion_id))
+        const prevPrep = preparacionPreviaDe(u, preparaciones)
+        values.push(prevPrep ? getName(prevPrep.trabajador_id) : '—')
       }
+      values.push(u.tipo_proceso ? PROCESO_LABEL[u.tipo_proceso] : '—')
+      values.push(formatTime(u.hora_preparacion))
+      values.push(getName(u.tecnico_preparacion_id))
       if (maquina.requiere_lanzamiento) {
-        values.push('') // placeholder for lanz. hora (not stored separately)
         values.push(getName(u.tecnico_lanzamiento_id))
       }
       values.push(formatTime(u.hora_acabado))

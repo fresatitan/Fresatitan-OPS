@@ -34,3 +34,24 @@ export function toValidUuid(id: string | null | undefined): string | null {
   if (!id) return null
   return UUID_REGEX.test(id) ? id : null
 }
+
+import type { Preparacion, UsoEquipo } from '../types/database'
+
+/**
+ * Encuentra la preparación más reciente de una máquina que ocurrió ANTES o AL MISMO TIEMPO
+ * que un uso dado. Se usa en informes para saber quién preparó la máquina antes de cada
+ * uso concreto. Devuelve null si no hay preparación previa (p.ej. usos históricos anteriores
+ * a la implementación del flujo de preparación).
+ */
+export function preparacionPreviaDe(
+  uso: UsoEquipo,
+  preparaciones: Preparacion[],
+): Preparacion | null {
+  const usoKey = `${uso.fecha}T${uso.hora_preparacion}`
+  return (
+    preparaciones
+      .filter((p) => p.maquina_id === uso.maquina_id)
+      .filter((p) => `${p.fecha}T${p.hora}` <= usoKey)
+      .sort((a, b) => `${b.fecha}T${b.hora}`.localeCompare(`${a.fecha}T${a.hora}`))[0] ?? null
+  )
+}

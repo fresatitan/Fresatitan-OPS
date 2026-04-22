@@ -4,9 +4,10 @@ import Layout from '../components/ui/Layout'
 import TopBar from '../components/ui/TopBar'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useTrabajadoresStore } from '../store/trabajadoresStore'
-import { formatTime } from '../lib/utils'
+import { formatTime, preparacionPreviaDe } from '../lib/utils'
+import { TIPOS_PROCESO } from '../constants/estados'
 import { exportPdfTablaPorMaquina, exportPdfResumenEjecutivo } from '../lib/pdfExport'
-import type { UsoEquipo, Maquina } from '../types/database'
+import type { UsoEquipo, Maquina, Preparacion } from '../types/database'
 import toast from 'react-hot-toast'
 
 /**
@@ -25,6 +26,7 @@ export default function Informes() {
   const usos = useWorkflowStore((s) => s.usos)
   const incidencias = useWorkflowStore((s) => s.incidencias)
   const mantenimientos = useWorkflowStore((s) => s.mantenimientos)
+  const preparaciones = useWorkflowStore((s) => s.preparaciones)
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
 
   const [filterMaquina, setFilterMaquina] = useState<string>('todas')
@@ -127,16 +129,18 @@ export default function Informes() {
         // Build columns depending on machine capabilities
         const columnasPorUso: string[] = []
         if (maquina.requiere_preparacion) {
-          columnasPorUso.push('Hora preparació', 'Tècnic preparació')
+          columnasPorUso.push('Preparó (técnico)', 'Preparó (hora)')
         }
+        columnasPorUso.push('Proceso')
+        columnasPorUso.push('Hora inicio', 'Técnico proceso')
         if (maquina.requiere_lanzamiento) {
-          columnasPorUso.push('Punxat (Tècnic)')
+          columnasPorUso.push('Técnico lanz.')
         }
-        columnasPorUso.push('Hora acabat', 'Tècnic acabat', 'Resultat')
+        columnasPorUso.push('Hora fin', 'Técnico cierre', 'Resultado')
 
         const header: string[] = ['Data']
         for (let i = 0; i < maxUsos; i++) header.push(...columnasPorUso)
-        header.push('Incidències', 'Total usos', 'Observacions')
+        header.push('Incidencias', 'Total usos', 'Observaciones')
 
         const rows: (string | number)[][] = [header]
 
@@ -156,9 +160,13 @@ export default function Informes() {
               continue
             }
             if (maquina.requiere_preparacion) {
-              row.push(formatTime(u.hora_preparacion))
-              row.push(getName(u.tecnico_preparacion_id))
+              const prepPrev = preparacionPreviaDe(u, preparaciones)
+              row.push(prepPrev ? getName(prepPrev.trabajador_id) : '')
+              row.push(prepPrev ? `${prepPrev.fecha} ${prepPrev.hora.slice(0, 5)}` : '')
             }
+            row.push(u.tipo_proceso ? TIPOS_PROCESO[u.tipo_proceso].label : '')
+            row.push(formatTime(u.hora_preparacion))
+            row.push(getName(u.tecnico_preparacion_id))
             if (maquina.requiere_lanzamiento) {
               row.push(getName(u.tecnico_lanzamiento_id))
             }
@@ -246,6 +254,7 @@ export default function Informes() {
         usos: usosFiltrados,
         incidencias,
         mantenimientos: mantenimientosFiltrados,
+        preparaciones,
         getName,
         desde,
         hasta,
@@ -418,11 +427,13 @@ export default function Informes() {
                     <tr className="bg-surface-3/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-tertiary">
                       <th className="px-3 py-2 text-left">Máquina</th>
                       <th className="px-3 py-2 text-left">Fecha</th>
-                      {showPrepColumns && <th className="px-3 py-2 text-left">Prep.</th>}
-                      {showPrepColumns && <th className="px-3 py-2 text-left">Técnico prep.</th>}
-                      {showLanzColumns && <th className="px-3 py-2 text-left">Lanz.</th>}
-                      <th className="px-3 py-2 text-left">Acabado</th>
-                      <th className="px-3 py-2 text-left">Técnico acab.</th>
+                      {showPrepColumns && <th className="px-3 py-2 text-left">Preparó</th>}
+                      <th className="px-3 py-2 text-left">Proceso</th>
+                      <th className="px-3 py-2 text-left">Hora inicio</th>
+                      <th className="px-3 py-2 text-left">Técnico proceso</th>
+                      {showLanzColumns && <th className="px-3 py-2 text-left">Téc. lanz.</th>}
+                      <th className="px-3 py-2 text-left">Hora fin</th>
+                      <th className="px-3 py-2 text-left">Técnico cierre</th>
                       <th className="px-3 py-2 text-center">Resultado</th>
                     </tr>
                   </thead>
@@ -437,6 +448,7 @@ export default function Informes() {
                             key={u.id}
                             uso={u}
                             maquina={m}
+                            preparaciones={preparaciones}
                             getName={getName}
                             showPrepColumns={showPrepColumns}
                             showLanzColumns={showLanzColumns}
@@ -485,22 +497,40 @@ function StatBlock({ label, value, className }: { label: string; value: number; 
 function UsoRow({
   uso,
   maquina,
+  preparaciones,
   getName,
   showPrepColumns,
   showLanzColumns,
 }: {
   uso: UsoEquipo
   maquina: Maquina | undefined
+  preparaciones: Preparacion[]
   getName: (id: string | null) => string
   showPrepColumns: boolean
   showLanzColumns: boolean
 }) {
+  const prepPrevia = preparacionPreviaDe(uso, preparaciones)
+  const procesoMeta = uso.tipo_proceso ? TIPOS_PROCESO[uso.tipo_proceso] : null
+
   return (
     <tr className="border-b border-border-subtle last:border-b-0 hover:bg-surface-3/40 transition-colors">
       <td className="px-3 py-2 font-mono text-[10px] text-primary">{maquina?.codigo ?? '—'}</td>
       <td className="px-3 py-2 font-mono text-text-secondary">{uso.fecha}</td>
-      {showPrepColumns && <td className="px-3 py-2 font-mono text-text-secondary">{formatTime(uso.hora_preparacion)}</td>}
-      {showPrepColumns && <td className="px-3 py-2 text-text-primary">{getName(uso.tecnico_preparacion_id)}</td>}
+      {showPrepColumns && (
+        <td className="px-3 py-2 text-text-primary">
+          {prepPrevia
+            ? <>
+                <div>{getName(prepPrevia.trabajador_id)}</div>
+                <div className="text-[9px] font-mono text-text-tertiary">{prepPrevia.fecha} · {prepPrevia.hora.slice(0, 5)}</div>
+              </>
+            : <span className="text-text-tertiary">—</span>}
+        </td>
+      )}
+      <td className="px-3 py-2 text-text-secondary">
+        {procesoMeta ? <>{procesoMeta.icon} {procesoMeta.label}</> : <span className="text-text-tertiary">—</span>}
+      </td>
+      <td className="px-3 py-2 font-mono text-text-secondary">{formatTime(uso.hora_preparacion)}</td>
+      <td className="px-3 py-2 text-text-primary">{getName(uso.tecnico_preparacion_id)}</td>
       {showLanzColumns && (
         <td className="px-3 py-2 text-text-tertiary">
           {maquina?.requiere_lanzamiento ? getName(uso.tecnico_lanzamiento_id) : '—'}
