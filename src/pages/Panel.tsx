@@ -152,11 +152,19 @@ function FamilySelector({
   maquinas: Maquina[]
   onSelect: (t: TipoMaquina) => void
 }) {
+  const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
+
   const families: { tipo: TipoMaquina; icon: string }[] = [
     { tipo: 'fresadora', icon: '⚙' },
     { tipo: 'sinterizadora', icon: '◎' },
     { tipo: 'impresora_3d', icon: '⎙' },
   ]
+
+  // Para cada máquina, ¿tiene una avería abierta (pendiente o confirmada)?
+  const tieneAveriaAbierta = (maquinaId: string) =>
+    estadosHistorial.some(
+      (e) => e.maquina_id === maquinaId && e.estado === 'avería' && !e.cerrada_en,
+    )
 
   return (
     <>
@@ -172,8 +180,13 @@ function FamilySelector({
           const ofFamily = maquinas.filter((m) => m.tipo === f.tipo)
           const disponibles = ofFamily.filter((m) => m.estado_actual === 'parada').length
           const enUso = ofFamily.filter((m) => m.estado_actual === 'activa').length
+          // Cuenta avisos: máquinas bloqueadas o con avería abierta aunque no esté
+          // bloqueada todavía (pendiente de revisar o confirmada leve)
           const problemas = ofFamily.filter(
-            (m) => m.estado_actual === 'avería' || m.estado_actual === 'mantenimiento'
+            (m) =>
+              m.estado_actual === 'avería' ||
+              m.estado_actual === 'mantenimiento' ||
+              tieneAveriaAbierta(m.id),
           ).length
           const empty = ofFamily.length === 0
 
@@ -332,6 +345,8 @@ function PlantMaquinaCard({
   activeUso: UsoEquipo | null
   onClick?: () => void
 }) {
+  const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
+
   const isAvailable = maquina.estado_actual === 'parada'
   const isInUse     = maquina.estado_actual === 'activa'
   const isAveria    = maquina.estado_actual === 'avería'
@@ -343,19 +358,53 @@ function PlantMaquinaCard({
     return <BlockedMaquinaCard maquina={maquina} />
   }
 
-  const disabled = false  // solo llegamos aquí si está operativa
+  // ¿Hay avería reportada pero aún no bloqueante? (pendiente de revisión por admin
+  // o confirmada como leve). En ambos casos la máquina sigue operativa pero se
+  // muestra advertencia visible.
+  const openAveria = estadosHistorial.find(
+    (e) =>
+      e.maquina_id === maquina.id &&
+      e.estado === 'avería' &&
+      !e.cerrada_en &&
+      // no consideramos las ya confirmadas como críticas: esas bloquean la
+      // máquina (estado_actual = 'avería') y caen en BlockedMaquinaCard arriba
+      !(e.severidad_confirmada_por_admin && e.severidad === 'critica'),
+  )
+
+  const warning = openAveria
+    ? openAveria.severidad_confirmada_por_admin && openAveria.severidad === 'leve'
+      ? { tone: 'leve' as const, label: 'AVERÍA LEVE ACTIVA', sub: 'Puedes usarla, pero el admin ya lo sabe' }
+      : { tone: 'pending' as const, label: 'AVERÍA PENDIENTE DE REVISAR', sub: 'Reportada, esperando al admin' }
+    : null
 
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
       className={`
         relative rounded-2xl border-2 p-5 text-left transition-all w-full min-h-[180px]
         flex flex-col
-        ${isAvailable ? 'bg-surface-2 border-border-subtle hover:border-primary hover:bg-surface-3 active:scale-[0.98]' : ''}
-        ${isInUse    ? 'bg-activa/10 border-activa/40 hover:bg-activa/15 active:scale-[0.98]' : ''}
+        ${isAvailable && !warning ? 'bg-surface-2 border-border-subtle hover:border-primary hover:bg-surface-3 active:scale-[0.98]' : ''}
+        ${isInUse    && !warning ? 'bg-activa/10 border-activa/40 hover:bg-activa/15 active:scale-[0.98]' : ''}
+        ${warning?.tone === 'pending' ? 'bg-parada/5 border-parada/40 hover:bg-parada/10 active:scale-[0.98]' : ''}
+        ${warning?.tone === 'leve'    ? 'bg-parada/5 border-parada/40 hover:bg-parada/10 active:scale-[0.98]' : ''}
       `}
     >
+      {/* Banner de advertencia no-bloqueante — cuando hay avería reportada */}
+      {warning && (
+        <div className="-mx-5 -mt-5 mb-3 px-4 py-2 rounded-t-2xl bg-parada text-white flex items-center gap-2">
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-mono font-bold tracking-wider uppercase leading-tight">
+              ⚠ {warning.label}
+            </div>
+            <div className="text-[10px] opacity-90 leading-tight">{warning.sub}</div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="font-mono text-sm text-primary font-bold">{maquina.codigo}</span>
@@ -377,13 +426,24 @@ function PlantMaquinaCard({
         </div>
       </div>
 
+      {/* Motivo del reporte (si hay avería abierta) */}
+      {openAveria?.motivo && (
+        <div className="mb-2 px-2.5 py-1.5 bg-surface-3/50 border-l-2 border-parada/60 rounded-r">
+          <p className="text-[11px] text-text-secondary leading-snug line-clamp-2">
+            {openAveria.motivo}
+          </p>
+        </div>
+      )}
+
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Footer */}
-      {isAvailable && (
-        <div className="mt-4 pt-3 border-t border-border-subtle">
-          <span className="text-base font-semibold text-activa">Toca para empezar →</span>
+      {isAvailable && !isInUse && (
+        <div className={`mt-4 pt-3 border-t ${warning ? 'border-parada/20' : 'border-border-subtle'}`}>
+          <span className={`text-base font-semibold ${warning ? 'text-parada' : 'text-activa'}`}>
+            Toca para empezar →
+          </span>
         </div>
       )}
 

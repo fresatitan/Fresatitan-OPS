@@ -70,7 +70,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
       averiaTecnico?.id ?? null,
       averiaSeveridad,
     )
-    toast.error(`${maquina.codigo} marcada como avería`, { icon: '⚠' })
+    toast(`Aviso enviado al admin · ${maquina.codigo}`, { icon: '⚠', duration: 5000 })
     onClose()
   }
 
@@ -151,7 +151,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
         {step === 'averia' && (
           <StepContent
             title="⚠ Reportar avería"
-            subtitle="Describe qué ocurre y propón la gravedad. La máquina quedará bloqueada hasta que el admin revise la alerta."
+            subtitle="Describe qué ocurre y propón la gravedad. La máquina sigue operativa — el admin decidirá si bloquearla o no."
           >
             <div className="space-y-4">
               <div>

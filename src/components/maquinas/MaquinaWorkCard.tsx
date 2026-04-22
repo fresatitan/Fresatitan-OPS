@@ -18,6 +18,7 @@ interface Props {
 
 export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props) {
   const usos = useWorkflowStore((s) => s.usos)
+  const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
   const getName = useTrabajadoresStore((s) => s.getTrabajadorName)
 
   const activeUso = usos.find((u) => u.maquina_id === maquina.id && u.resultado === 'pendiente') ?? null
@@ -31,6 +32,15 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
   const isBusy = !!activeUso
   const canOperate = maquina.activa && maquina.estado_actual !== 'inactiva'
 
+  // Avería abierta no bloqueante (pendiente de revisión o confirmada leve)
+  const pendingAveria = estadosHistorial.find(
+    (e) =>
+      e.maquina_id === maquina.id &&
+      e.estado === 'avería' &&
+      !e.cerrada_en &&
+      maquina.estado_actual !== 'avería', // si está bloqueada ya no es "pendiente"
+  )
+
   return (
     <>
       <div
@@ -43,6 +53,21 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
           ${!isBusy && maquina.estado_actual !== 'avería' ? 'border-border-subtle hover:border-border-default' : ''}
         `}
       >
+        {/* Banner de aviso no bloqueante (pendiente revisión o leve confirmada) */}
+        {pendingAveria && (
+          <div className="px-4 py-1.5 bg-parada text-white flex items-center gap-2 border-b border-parada/40">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+            </span>
+            <span className="text-[10px] font-mono font-bold tracking-wider uppercase">
+              {pendingAveria.severidad_confirmada_por_admin && pendingAveria.severidad === 'leve'
+                ? '⚠ Avería leve activa'
+                : '⏳ Avería pendiente de revisar'}
+            </span>
+          </div>
+        )}
+
         {/* Header — código, nombre, tipo y estado */}
         <div className="px-4 pt-3 pb-2.5 border-b border-border-subtle">
           <div className="flex items-start justify-between gap-2">
