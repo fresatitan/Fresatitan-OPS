@@ -37,30 +37,7 @@ export default function SeleccionTipoTrabajoModal({
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Production card */}
-          <button
-            onClick={onSelectProduccion}
-            className="
-              group relative flex flex-col items-center justify-center gap-3
-              min-h-[140px] p-6 rounded-2xl border-2
-              bg-primary/5 border-primary/30
-              hover:bg-primary/10 hover:border-primary/60
-              active:scale-[0.97] transition-all
-            "
-          >
-            <div className="w-14 h-14 rounded-xl bg-primary/15 flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D09A40" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-primary">Producción</div>
-              <div className="text-xs text-text-tertiary mt-1">Iniciar un trabajo</div>
-            </div>
-          </button>
-
-          {/* Preparation card */}
+          {/* Preparation card — primero: el proceso previo */}
           <button
             onClick={onSelectPreparacion}
             className="
@@ -84,7 +61,30 @@ export default function SeleccionTipoTrabajoModal({
             </div>
           </button>
 
-          {/* Maintenance card */}
+          {/* Production card — segundo: el trabajo */}
+          <button
+            onClick={onSelectProduccion}
+            className="
+              group relative flex flex-col items-center justify-center gap-3
+              min-h-[140px] p-6 rounded-2xl border-2
+              bg-primary/5 border-primary/30
+              hover:bg-primary/10 hover:border-primary/60
+              active:scale-[0.97] transition-all
+            "
+          >
+            <div className="w-14 h-14 rounded-xl bg-primary/15 flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D09A40" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-primary">Producción</div>
+              <div className="text-xs text-text-tertiary mt-1">Iniciar un trabajo</div>
+            </div>
+          </button>
+
+          {/* Maintenance card — tercero: el proceso excepcional */}
           <button
             onClick={onSelectMantenimiento}
             className="
