@@ -117,7 +117,7 @@ export function exportPdfTablaPorMaquina({ maquinas, usos, incidencias, mantenim
     // Build columns depending on machine capabilities
     const colTitulos: string[] = ['Fecha']
     if (maquina.requiere_preparacion) {
-      colTitulos.push('Preparó')
+      colTitulos.push('Preparado')
     }
     colTitulos.push('Proceso', 'Hora inicio', 'Téc. proceso')
     if (maquina.requiere_lanzamiento) {

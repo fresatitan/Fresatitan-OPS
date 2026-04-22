@@ -129,7 +129,7 @@ export default function Informes() {
         // Build columns depending on machine capabilities
         const columnasPorUso: string[] = []
         if (maquina.requiere_preparacion) {
-          columnasPorUso.push('Preparó (técnico)', 'Preparó (hora)')
+          columnasPorUso.push('Preparado por', 'Preparado el')
         }
         columnasPorUso.push('Proceso')
         columnasPorUso.push('Hora inicio', 'Técnico proceso')
@@ -427,7 +427,7 @@ export default function Informes() {
                     <tr className="bg-surface-3/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-tertiary">
                       <th className="px-3 py-2 text-left">Máquina</th>
                       <th className="px-3 py-2 text-left">Fecha</th>
-                      {showPrepColumns && <th className="px-3 py-2 text-left">Preparó</th>}
+                      {showPrepColumns && <th className="px-3 py-2 text-left">Preparado</th>}
                       <th className="px-3 py-2 text-left">Proceso</th>
                       <th className="px-3 py-2 text-left">Hora inicio</th>
                       <th className="px-3 py-2 text-left">Técnico proceso</th>
