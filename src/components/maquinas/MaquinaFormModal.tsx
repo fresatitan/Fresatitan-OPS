@@ -121,13 +121,14 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
               }
             `}
           >
-            <span>{requierePreparacion ? 'Sí — el trabajador indica quién prepara' : 'No — va directo a producción'}</span>
+            <span>{requierePreparacion ? 'Sí — ciclo prep → producción → cierre' : 'No — va directo a producción'}</span>
             <span className={`w-8 h-4 rounded-full relative ${requierePreparacion ? 'bg-primary' : 'bg-surface-4'}`}>
               <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${requierePreparacion ? 'left-4' : 'left-0.5'}`} />
             </span>
           </button>
           <p className="text-[10px] text-text-tertiary mt-1">
-            Si se activa, el trabajador seleccionará quién prepara la máquina antes de empezar.
+            Si se activa, aparecerá la opción "Preparación" en el panel y se exigirá preparar
+            la máquina antes de cada nueva producción. Por defecto: sí en sinterizadoras, no en fresadoras/impresoras 3D.
           </p>
         </Field>
 

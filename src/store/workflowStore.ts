@@ -849,6 +849,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   maquinaNecesitaPrep: (maquinaId) => {
     const state = get()
 
+    // Si la máquina no requiere preparación por configuración (ej. fresadoras),
+    // nunca se considera que la necesite. La regla del ciclo solo aplica a
+    // las máquinas marcadas como requiere_preparacion=true.
+    const maquina = state.maquinas.find((m) => m.id === maquinaId)
+    if (!maquina || !maquina.requiere_preparacion) return false
+
     // Última preparación de esta máquina (store ya viene ordenado desc)
     const lastPrep = state.preparaciones.find((p) => p.maquina_id === maquinaId) ?? null
 

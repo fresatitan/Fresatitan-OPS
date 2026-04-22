@@ -95,8 +95,9 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
         {/* Active uso indicator */}
         {activeUso && <ActiveUsoBar maquina={maquina} uso={activeUso} onFinish={() => setShowCerrar(true)} />}
 
-        {/* Badge: preparación vigente (verde) o pendiente (ámbar) — solo si la máquina está libre */}
-        {!isBusy && maquina.estado_actual === 'parada' && (
+        {/* Badge: preparación vigente (verde) o pendiente (ámbar) — sólo para máquinas
+            libres Y con requiere_preparacion=true (las que no lo requieren no muestran nada) */}
+        {!isBusy && maquina.estado_actual === 'parada' && maquina.requiere_preparacion && (
           preparacionVigente ? (
             <div className="px-4 py-1.5 bg-activa/10 border-b border-activa/20 flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase text-activa">

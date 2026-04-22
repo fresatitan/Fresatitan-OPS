@@ -33,6 +33,10 @@ export default function SeleccionTipoTrabajoModal({
   onSelectPreparacion,
   onSelectAveria,
 }: Props) {
+  // La máquina solo ofrece opción de Preparación si está marcada como
+  // requiere_preparacion en su ficha (se configura desde Máquinas → Editar).
+  const mostrarPreparacion = maquina.requiere_preparacion
+
   return (
     <Modal open={open} onClose={onClose} title={`${maquina.codigo} · ${maquina.nombre}`} size="lg">
       <div className="min-h-[280px]">
@@ -44,7 +48,7 @@ export default function SeleccionTipoTrabajoModal({
         </p>
 
         {/* Banner informativo si hay que preparar primero */}
-        {needsPrep && (
+        {needsPrep && mostrarPreparacion && (
           <div className="mb-5 px-4 py-3 rounded-lg bg-activa/10 border border-activa/30 flex items-start gap-3">
             <span className="text-2xl leading-none">🧹</span>
             <div className="flex-1 leading-snug">
@@ -57,30 +61,32 @@ export default function SeleccionTipoTrabajoModal({
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Preparation card — primero: el proceso previo */}
-          <button
-            onClick={onSelectPreparacion}
-            className="
-              group relative flex flex-col items-center justify-center gap-3
-              min-h-[140px] p-6 rounded-2xl border-2
-              bg-activa/5 border-activa/30
-              hover:bg-activa/10 hover:border-activa/60
-              active:scale-[0.97] transition-all
-            "
-          >
-            <div className="w-14 h-14 rounded-xl bg-activa/15 flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16v4H4z" />
-                <path d="M6 8v12h12V8" />
-                <path d="M10 14l2 2 4-4" />
-              </svg>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-activa">Preparación</div>
-              <div className="text-xs text-text-tertiary mt-1">Limpiar / acondicionar</div>
-            </div>
-          </button>
+        <div className={`grid grid-cols-1 gap-4 ${mostrarPreparacion ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+          {/* Preparation card — solo si la máquina lo requiere */}
+          {mostrarPreparacion && (
+            <button
+              onClick={onSelectPreparacion}
+              className="
+                group relative flex flex-col items-center justify-center gap-3
+                min-h-[140px] p-6 rounded-2xl border-2
+                bg-activa/5 border-activa/30
+                hover:bg-activa/10 hover:border-activa/60
+                active:scale-[0.97] transition-all
+              "
+            >
+              <div className="w-14 h-14 rounded-xl bg-activa/15 flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16v4H4z" />
+                  <path d="M6 8v12h12V8" />
+                  <path d="M10 14l2 2 4-4" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-activa">Preparación</div>
+                <div className="text-xs text-text-tertiary mt-1">Limpiar / acondicionar</div>
+              </div>
+            </button>
+          )}
 
           {/* Production card — segundo: el trabajo (deshabilitado si falta prep) */}
           <button
