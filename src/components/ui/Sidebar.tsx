@@ -1,6 +1,7 @@
 import { useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import TrabajadorAvatar from './TrabajadorAvatar'
+import ThemeToggle from './ThemeToggle'
 import toast from 'react-hot-toast'
 
 const NAV_ITEMS = [
@@ -61,7 +62,7 @@ export default function Sidebar() {
         })}
 
         {/* Separador y acceso rápido al Panel */}
-        <div className="pt-3 mt-3 border-t border-border-subtle">
+        <div className="pt-3 mt-3 border-t border-border-subtle space-y-0.5">
           <a
             href="/panel"
             target="_blank"
@@ -76,6 +77,7 @@ export default function Sidebar() {
               <line x1="7" y1="9" x2="13" y2="3" />
             </svg>
           </a>
+          <ThemeToggle />
         </div>
       </nav>
 

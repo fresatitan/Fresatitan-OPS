@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand */
+  /* Brand — same in both modes (gold is bright enough for both) */
   --color-primary: #D09A40;
   --color-primary-light: #E8B95A;
   --color-primary-dark: #A87B2E;
   --color-primary-muted: rgba(208, 154, 64, 0.15);
   --color-primary-glow: rgba(208, 154, 64, 0.08);
 
+  /* === DARK MODE (default) === */
   /* Surface system */
   --color-surface-0: #0A0A0A;
   --color-surface-1: #0F0F0F;
@@ -27,7 +28,12 @@
   --color-text-tertiary: #555555;
   --color-text-inverse: #0A0A0A;
 
-  /* Machine states */
+  /* Hovers / scrollbar — adaptables al modo */
+  --color-overlay-low: rgba(255, 255, 255, 0.05);
+  --color-overlay-mid: rgba(255, 255, 255, 0.1);
+  --color-overlay-high: rgba(255, 255, 255, 0.2);
+
+  /* Machine states — semantic, no cambian con el tema */
   --color-activa: #22C55E;
   --color-activa-muted: rgba(34, 197, 94, 0.15);
   --color-parada: #F59E0B;
@@ -42,6 +48,40 @@
   /* Fonts */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'DM Mono', 'SF Mono', 'Fira Code', monospace;
+}
+
+/* === LIGHT MODE — overrides === */
+[data-theme='light'] {
+  /* Surfaces invertidas (claras, con escala muy sutil para profundidad) */
+  --color-surface-0: #FFFFFF;
+  --color-surface-1: #F7F7F8;
+  --color-surface-2: #F0F1F2;
+  --color-surface-3: #E7E8EA;
+  --color-surface-4: #D8DADD;
+
+  /* Borders oscuros con alpha sobre fondo claro */
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+  --color-border-default: rgba(0, 0, 0, 0.14);
+  --color-border-strong: rgba(0, 0, 0, 0.22);
+
+  /* Text invertido — oscuros sobre fondos claros, asegurando contraste WCAG */
+  --color-text-primary: #0F0F10;
+  --color-text-secondary: #4B4B4D;
+  --color-text-tertiary: #7A7A7C;
+  /* text-inverse permanece oscuro: se usa sobre el dorado, donde texto oscuro
+     funciona bien en ambos modos. */
+
+  /* Overlays con alfa oscura */
+  --color-overlay-low: rgba(0, 0, 0, 0.04);
+  --color-overlay-mid: rgba(0, 0, 0, 0.08);
+  --color-overlay-high: rgba(0, 0, 0, 0.18);
+
+  /* Estados — ligeramente más opacos para mantener visibilidad sobre fondos claros */
+  --color-activa-muted: rgba(34, 197, 94, 0.18);
+  --color-parada-muted: rgba(245, 158, 11, 0.18);
+  --color-averia-muted: rgba(239, 68, 68, 0.16);
+  --color-mantenimiento-muted: rgba(59, 130, 246, 0.16);
+  --color-inactiva-muted: rgba(107, 114, 128, 0.18);
 }
 
 /* === Base === */
@@ -73,11 +113,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-overlay-mid);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-overlay-high);
 }
 
 /* === Utility classes === */
@@ -103,6 +143,10 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 128px 128px;
+}
+[data-theme='light'] .noise-bg::before {
+  opacity: 0.025;
+  mix-blend-mode: multiply;
 }
 
 /* === State animations === */
@@ -156,7 +200,7 @@ body {
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 .card-interactive:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--color-border-default);
   background-color: var(--color-surface-3);
 }
 

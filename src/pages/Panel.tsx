@@ -8,6 +8,7 @@ import CerrarUsoModal from '../components/maquinas/CerrarUsoModal'
 import SeleccionTipoTrabajoModal from '../components/panel/SeleccionTipoTrabajoModal'
 import StartMantenimientoModal from '../components/panel/StartMantenimientoModal'
 import StartPreparacionModal from '../components/panel/StartPreparacionModal'
+import ThemeToggle from '../components/ui/ThemeToggle'
 import { TIPOS_MAQUINA, TIPOS_MAQUINA_PLURAL } from '../constants/estados'
 import type { Maquina, TipoMaquina, UsoEquipo } from '../types/database'
 
@@ -98,11 +99,14 @@ export default function Panel() {
             <span className="text-lg font-light text-primary ml-1.5">OPS</span>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-sm font-semibold text-text-primary">
-            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+        <div className="flex items-center gap-3">
+          <ThemeToggle variant="panel" />
+          <div className="text-right">
+            <div className="text-sm font-semibold text-text-primary">
+              {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </div>
+            <LiveClock />
           </div>
-          <LiveClock />
         </div>
       </header>
 

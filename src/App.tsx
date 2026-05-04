@@ -13,12 +13,17 @@ import RequireAuth from './components/auth/RequireAuth'
 import { useAuthStore } from './store/authStore'
 import { useWorkflowStore } from './store/workflowStore'
 import { useTrabajadoresStore } from './store/trabajadoresStore'
+import { useThemeStore } from './store/themeStore'
 import { isNative } from './lib/capacitor'
 
 export default function App() {
   const initializeAuth = useAuthStore((s) => s.initialize)
 
   useEffect(() => {
+    // Aplica el tema persistido al DOM en el primer arranque (rehidratación
+    // del store en caso de que onRehydrateStorage no haya disparado todavía).
+    useThemeStore.getState().initialize()
+
     // Auth solo en web (admin). En APK no hay login.
     if (!isNative) initializeAuth()
 
@@ -40,9 +45,9 @@ export default function App() {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#1A1A1A',
-            color: '#F0F0F0',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--color-surface-3)',
+            color: 'var(--color-text-primary)',
+            border: '1px solid var(--color-border-default)',
             fontSize: '13px',
           },
         }}
