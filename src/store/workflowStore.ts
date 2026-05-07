@@ -39,18 +39,27 @@ import type {
 const nowIso = new Date().toISOString()
 
 const SEED_MAQUINAS: Maquina[] = [
-  { id: 'm1',  codigo: 'REF-030', nombre: 'Fresadora UP3D ZR',               tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm2',  codigo: 'REF-057', nombre: 'Fresadora P53 ZR',                tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm3',  codigo: 'REF-062', nombre: 'Fresadora UP3D Disilicato',       tipo: 'fresadora',    numero_serie: null, descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm4',  codigo: 'REF-039', nombre: 'Fresadora CM Fanuc 1',            tipo: 'fresadora',    numero_serie: '188ZG886', descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm5',  codigo: 'REF-040', nombre: 'Fresadora CM Fanuc 2',            tipo: 'fresadora',    numero_serie: '229AG695', descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm6',  codigo: 'REF-042', nombre: 'Fresadora Biomill',               tipo: 'fresadora',    numero_serie: '1020',     descripcion: null, ubicacion: 'Zona CNC', estado_actual: 'parada', requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
-  { id: 'm7',  codigo: 'REF-041', nombre: 'Fresadora CM Lilian',             tipo: 'fresadora',    numero_serie: '12654',    descripcion: 'Retirada del servicio', ubicacion: 'Zona CNC', estado_actual: 'inactiva', requiere_preparacion: false, requiere_lanzamiento: true, activa: false, created_at: nowIso, updated_at: nowIso },
-  { id: 'm8',  codigo: 'REF-045', nombre: 'Sinterizadora Trumpf Multilaser', tipo: 'sinterizadora', numero_serie: 'S0711Q0182', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
-  { id: 'm9',  codigo: 'REF-046', nombre: 'Sinterizadora Trumpf 3D Laser',   tipo: 'sinterizadora', numero_serie: 'S0711Q0182', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
-  { id: 'm10', codigo: 'REF-047', nombre: 'Sinterizadora Trumpf',            tipo: 'sinterizadora', numero_serie: 'S0711Q0022', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
-  { id: 'm11', codigo: 'REF-048', nombre: 'Sinterizadora Sisma 1',           tipo: 'sinterizadora', numero_serie: 'LS005865',   descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
-  { id: 'm12', codigo: 'REF-049', nombre: 'Sinterizadora Sisma 2',           tipo: 'sinterizadora', numero_serie: 'LS0008790',  descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  // Fresadoras SECO
+  { id: 'm1',  codigo: 'REF-030', nombre: 'Fresadora UP 3D Zr 1',            tipo: 'fresadora',    subtipo: 'seco',   numero_serie: '20222065', descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm2',  codigo: 'REF-057', nombre: 'Fresadora UP P53 Zr 2',           tipo: 'fresadora',    subtipo: 'seco',   numero_serie: '20244451', descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm13', codigo: 'REF-064', nombre: 'Fresadora UP P53 DC',             tipo: 'fresadora',    subtipo: 'seco',   numero_serie: '20244497', descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
+  // Fresadoras HÚMEDO
+  { id: 'm3',  codigo: 'REF-062', nombre: 'Fresadora DS UP3D P42',           tipo: 'fresadora',    subtipo: 'humedo', numero_serie: '20244135', descripcion: null, ubicacion: 'Zona CAD-CAM', estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm6',  codigo: 'REF-042', nombre: 'Fresadora Biomill',               tipo: 'fresadora',    subtipo: 'humedo', numero_serie: 'DF100-1020', descripcion: null, ubicacion: 'Zona CNC',     estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: false, activa: true,  created_at: nowIso, updated_at: nowIso },
+  // Fresadoras METAL (CNC con lanzamiento)
+  { id: 'm4',  codigo: 'REF-039', nombre: 'Fresadora CM FANUC 1',            tipo: 'fresadora',    subtipo: 'metal',  numero_serie: 'P188ZG886', descripcion: null, ubicacion: 'Zona CNC',    estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm5',  codigo: 'REF-040', nombre: 'Fresadora CM FANUC 2',            tipo: 'fresadora',    subtipo: 'metal',  numero_serie: 'P229AG695', descripcion: null, ubicacion: 'Zona CNC',    estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm14', codigo: 'REF-066', nombre: 'Fresadora CM FANUC 3',            tipo: 'fresadora',    subtipo: 'metal',  numero_serie: 'P246AG322', descripcion: null, ubicacion: 'Zona CNC',    estado_actual: 'parada',   requiere_preparacion: false, requiere_lanzamiento: true,  activa: true,  created_at: nowIso, updated_at: nowIso },
+  { id: 'm7',  codigo: 'REF-041', nombre: 'Fresadora CM Lilian',             tipo: 'fresadora',    subtipo: 'metal',  numero_serie: '12654',    descripcion: 'Retirada del servicio', ubicacion: 'Zona CNC', estado_actual: 'inactiva', requiere_preparacion: false, requiere_lanzamiento: true, activa: false, created_at: nowIso, updated_at: nowIso },
+  // Sinterizadoras
+  { id: 'm8',  codigo: 'REF-045', nombre: 'Sinterizadora TRUMPF MULTILASER', tipo: 'sinterizadora', subtipo: null, numero_serie: 'S0711Q0182', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm9',  codigo: 'REF-046', nombre: 'Sinterizadora TRUMPF 3D LASER',   tipo: 'sinterizadora', subtipo: null, numero_serie: 'S0711Q069',  descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm10', codigo: 'REF-047', nombre: 'Sinterizadora TRUMPF',            tipo: 'sinterizadora', subtipo: null, numero_serie: 'S0711Q0022', descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm11', codigo: 'REF-048', nombre: 'Sinterizadora SISMA 2 MYSINT',    tipo: 'sinterizadora', subtipo: null, numero_serie: 'LS0005866',  descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm12', codigo: 'REF-049', nombre: 'Sinterizadora SISMA 1 MYSINT',    tipo: 'sinterizadora', subtipo: null, numero_serie: 'LS0008790',  descripcion: null, ubicacion: 'Zona Sinter.', estado_actual: 'parada', requiere_preparacion: true, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  // Impresoras 3D
+  { id: 'm15', codigo: 'REF-063', nombre: 'Impresora PROZEN SONIC XL 4K',    tipo: 'impresora_3d', subtipo: null, numero_serie: 'LCSXFT11003', descripcion: null, ubicacion: 'Zona Impresión 3D', estado_actual: 'parada', requiere_preparacion: false, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
+  { id: 'm16', codigo: 'REF-067', nombre: 'Impresora MIICRAFT',              tipo: 'impresora_3d', subtipo: null, numero_serie: 'LM300G003',   descripcion: null, ubicacion: 'Zona Impresión 3D', estado_actual: 'parada', requiere_preparacion: false, requiere_lanzamiento: false, activa: true, created_at: nowIso, updated_at: nowIso },
 ]
 
 // -----------------------------------------------------------------------------
@@ -78,13 +87,19 @@ export interface IniciarUsoInput {
   tipo_proceso?: TipoProceso | null
 }
 
+export interface IncidenciaInput {
+  tipo: string | null   // categoría del desplegable, p.ej. 'Rotura de herramienta'
+  descripcion: string   // texto libre obligatorio
+}
+
 export interface CerrarUsoInput {
   uso_id: string
   hora_acabado?: string
   tecnico_acabado_id: string
   resultado: Exclude<ResultadoUso, 'pendiente'>
   observaciones?: string | null
-  incidencias?: string[]
+  /** Lista de incidencias. Cada una tiene su tipo (categoría) + descripción libre. */
+  incidencias?: IncidenciaInput[]
 }
 
 export interface NuevoMantenimientoInput {
@@ -129,8 +144,8 @@ interface WorkflowState {
   registrarPreparacion: (input: { maquinaId: string; trabajadorId: string | null; observaciones?: string | null }) => Promise<string | null>
 
   // Maquinas CRUD (solo admin, desde /maquinas)
-  addMaquina: (data: Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_preparacion' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion'>) => Promise<void>
-  updateMaquina: (id: string, data: Partial<Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'requiere_preparacion' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion' | 'activa'>>) => Promise<void>
+  addMaquina: (data: Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'subtipo' | 'requiere_preparacion' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion'>) => Promise<void>
+  updateMaquina: (id: string, data: Partial<Pick<Maquina, 'codigo' | 'nombre' | 'tipo' | 'subtipo' | 'requiere_preparacion' | 'requiere_lanzamiento' | 'descripcion' | 'ubicacion' | 'activa'>>) => Promise<void>
   removeMaquina: (id: string) => Promise<void>
   updateEstadoMaquina: (maquinaId: string, estado: EstadoMaquina) => Promise<void>
   reportarAveria: (maquinaId: string, motivo: string, usuarioId?: string | null, severidadPropuesta?: SeveridadAveria) => Promise<void>
@@ -404,11 +419,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         const uso = s.usos.find((u) => u.id === uso_id)
         if (!uso) return s
         const incidenciasNuevas: Incidencia[] = (incidencias ?? [])
-          .filter((d) => d.trim().length > 0)
-          .map((descripcion) => ({
+          .filter((d) => d.descripcion.trim().length > 0)
+          .map((d) => ({
             id: newLocalId('i'),
             uso_id,
-            descripcion: descripcion.trim(),
+            descripcion: d.descripcion.trim(),
+            tipo: d.tipo ?? null,
             created_at: new Date().toISOString(),
           }))
         return {
@@ -437,11 +453,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
 
     // Crear incidencias si las hay
-    const descripciones = (incidencias ?? []).map((d) => d.trim()).filter(Boolean)
-    if (descripciones.length > 0) {
+    const incidenciasLimpias = (incidencias ?? [])
+      .map((d) => ({ tipo: d.tipo ?? null, descripcion: d.descripcion.trim() }))
+      .filter((d) => d.descripcion.length > 0)
+    if (incidenciasLimpias.length > 0) {
       const { error: incErr } = await supabase
         .from('incidencias')
-        .insert(descripciones.map((descripcion) => ({ uso_id, descripcion })))
+        .insert(incidenciasLimpias.map(({ tipo, descripcion }) => ({ uso_id, tipo, descripcion })))
       if (incErr) {
         console.error('[cerrarUso] incidencias error:', incErr)
       }
@@ -532,6 +550,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       codigo: data.codigo,
       nombre: data.nombre,
       tipo: data.tipo as TipoMaquina,
+      subtipo: data.tipo === 'fresadora' ? data.subtipo ?? null : null,
       numero_serie: null,
       descripcion: data.descripcion ?? null,
       ubicacion: data.ubicacion ?? null,

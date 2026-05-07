@@ -9,8 +9,8 @@ import SeleccionTipoTrabajoModal from '../components/panel/SeleccionTipoTrabajoM
 import StartMantenimientoModal from '../components/panel/StartMantenimientoModal'
 import StartPreparacionModal from '../components/panel/StartPreparacionModal'
 import ThemeToggle from '../components/ui/ThemeToggle'
-import { TIPOS_MAQUINA, TIPOS_MAQUINA_PLURAL } from '../constants/estados'
-import type { Maquina, TipoMaquina, UsoEquipo } from '../types/database'
+import { TIPOS_MAQUINA, TIPOS_MAQUINA_PLURAL, SUBTIPOS_FRESADORA } from '../constants/estados'
+import type { Maquina, TipoMaquina, UsoEquipo, SubtipoFresadora } from '../types/database'
 
 /**
  * Panel de Planta — FRESATITAN OPS
@@ -323,6 +323,31 @@ function MachinesView({
             No hay máquinas operativas en esta familia.
           </p>
         </div>
+      ) : family === 'fresadora' ? (
+        // Fresadoras agrupadas por sub-familia (METAL / SECO / HÚMEDO)
+        <div className="space-y-7">
+          {(['metal', 'seco', 'humedo'] as SubtipoFresadora[]).map((sub) => {
+            const lista = [...maquinas]
+              .filter((m) => m.subtipo === sub)
+              .sort((a, b) => estadoPrioridad(a.estado_actual) - estadoPrioridad(b.estado_actual))
+            if (lista.length === 0) return null
+            return (
+              <div key={sub}>
+                <SubFamilyTitle subtipo={sub} count={lista.length} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {lista.map((m) => (
+                    <PlantMaquinaCard
+                      key={m.id}
+                      maquina={m}
+                      activeUso={getUso(m.id)}
+                      onClick={() => onMachineTap(m)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...maquinas]
@@ -338,6 +363,25 @@ function MachinesView({
         </div>
       )}
     </>
+  )
+}
+
+function SubFamilyTitle({ subtipo, count }: { subtipo: SubtipoFresadora; count: number }) {
+  const meta = SUBTIPOS_FRESADORA[subtipo]
+  const accent =
+    subtipo === 'metal'  ? 'border-l-mantenimiento'
+    : subtipo === 'seco' ? 'border-l-primary'
+    : 'border-l-activa'
+  return (
+    <div className="mb-3 flex items-baseline gap-3">
+      <div className={`pl-3 border-l-4 ${accent}`}>
+        <span className="text-base font-bold uppercase tracking-wider text-text-primary">
+          {meta.short}
+        </span>
+        <span className="ml-2 text-sm font-mono text-text-tertiary">{count}</span>
+      </div>
+      <span className="text-xs text-text-tertiary italic hidden sm:inline">{meta.description}</span>
+    </div>
   )
 }
 

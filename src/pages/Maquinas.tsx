@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Layout from '../components/ui/Layout'
 import TopBar from '../components/ui/TopBar'
 import MaquinaWorkCard from '../components/maquinas/MaquinaWorkCard'
@@ -20,6 +20,39 @@ const TABS: { value: FilterTab; label: string }[] = [
   { value: 'inactiva', label: 'Inactivas' },
 ]
 
+// Cinco grupos visuales en el orden en el que se enseñan al admin
+type GrupoKey =
+  | 'fresadora_metal'
+  | 'fresadora_seco'
+  | 'fresadora_humedo'
+  | 'sinterizadora'
+  | 'impresora_3d'
+
+interface Grupo {
+  key: GrupoKey
+  label: string
+  /** Texto explicativo bajo el título */
+  hint?: string
+}
+
+const GRUPOS: Grupo[] = [
+  { key: 'fresadora_metal',  label: 'Fresadoras · Metal',   hint: 'CNC con lanzamiento manual (Fanuc)' },
+  { key: 'fresadora_seco',   label: 'Fresadoras · Seco',    hint: 'UP3D, P53' },
+  { key: 'fresadora_humedo', label: 'Fresadoras · Húmedo',  hint: 'Biomill, DS UP3D' },
+  { key: 'sinterizadora',    label: 'Sinterizadoras',       hint: 'Trumpf, Sisma' },
+  { key: 'impresora_3d',     label: 'Impresoras 3D' },
+]
+
+function grupoDe(m: Maquina): GrupoKey {
+  if (m.tipo === 'fresadora') {
+    if (m.subtipo === 'metal')  return 'fresadora_metal'
+    if (m.subtipo === 'humedo') return 'fresadora_humedo'
+    return 'fresadora_seco'   // default si subtipo es null/seco
+  }
+  if (m.tipo === 'sinterizadora') return 'sinterizadora'
+  return 'impresora_3d'
+}
+
 export default function Maquinas() {
   const { maquinas, usos, mantenimientos } = useWorkflowStore()
   const [filter, setFilter] = useState<FilterTab>('todas')
@@ -28,9 +61,27 @@ export default function Maquinas() {
   const [editTarget, setEditTarget] = useState<Maquina | null>(null)
   const [historialFor, setHistorialFor] = useState<Maquina | null>(null)
 
-  const filtered = filter === 'todas'
-    ? maquinas
-    : maquinas.filter((m) => m.estado_actual === filter)
+  const filtered = useMemo(
+    () => filter === 'todas'
+      ? maquinas
+      : maquinas.filter((m) => m.estado_actual === filter),
+    [maquinas, filter],
+  )
+
+  const porGrupo = useMemo(() => {
+    const map: Record<GrupoKey, Maquina[]> = {
+      fresadora_metal:  [],
+      fresadora_seco:   [],
+      fresadora_humedo: [],
+      sinterizadora:    [],
+      impresora_3d:     [],
+    }
+    // Ordena por código dentro de cada grupo para una lectura predecible
+    for (const m of [...filtered].sort((a, b) => a.codigo.localeCompare(b.codigo))) {
+      map[grupoDe(m)].push(m)
+    }
+    return map
+  }, [filtered])
 
   const allWork = [
     ...usos.map((u) => ({
@@ -90,6 +141,7 @@ export default function Maquinas() {
       <main className="p-4 lg:p-6">
         {viewMode === 'grid' ? (
           <>
+            {/* Filtros por estado */}
             <div className="flex gap-1 mb-5 overflow-x-auto pb-1">
               {TABS.map(({ value, label }) => (
                 <button
@@ -108,20 +160,32 @@ export default function Maquinas() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filtered.map((m) => (
-                <MaquinaWorkCard
-                  key={m.id}
-                  maquina={m}
-                  onHistorial={() => setHistorialFor(m)}
-                  onEdit={() => setEditTarget(m)}
-                />
-              ))}
-            </div>
-
-            {filtered.length === 0 && (
+            {/* Grid agrupado por sub-familia */}
+            {filtered.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-text-tertiary text-sm">No hay máquinas con estado «{filter}»</p>
+              </div>
+            ) : (
+              <div className="space-y-7">
+                {GRUPOS.map(({ key, label, hint }) => {
+                  const lista = porGrupo[key]
+                  if (lista.length === 0) return null
+                  return (
+                    <section key={key}>
+                      <GroupHeader label={label} hint={hint} count={lista.length} grupoKey={key} />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                        {lista.map((m) => (
+                          <MaquinaWorkCard
+                            key={m.id}
+                            maquina={m}
+                            onHistorial={() => setHistorialFor(m)}
+                            onEdit={() => setEditTarget(m)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )
+                })}
               </div>
             )}
           </>
@@ -174,5 +238,43 @@ export default function Maquinas() {
         />
       )}
     </Layout>
+  )
+}
+
+// =============================================================================
+// Cabecera de grupo
+// =============================================================================
+function GroupHeader({
+  label,
+  hint,
+  count,
+  grupoKey,
+}: {
+  label: string
+  hint?: string
+  count: number
+  grupoKey: GrupoKey
+}) {
+  // Color de acento por familia/sub-familia
+  const acento =
+    grupoKey === 'fresadora_metal'  ? 'border-l-mantenimiento'
+    : grupoKey === 'fresadora_seco' ? 'border-l-primary'
+    : grupoKey === 'fresadora_humedo' ? 'border-l-activa'
+    : grupoKey === 'sinterizadora'  ? 'border-l-parada'
+    : 'border-l-text-tertiary'   // impresora_3d
+
+  return (
+    <div className="flex items-center gap-3 mb-3">
+      <div className={`pl-3 border-l-4 ${acento} flex items-baseline gap-2`}>
+        <h3 className="text-sm font-bold text-text-primary">{label}</h3>
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-3 text-text-tertiary">
+          {count}
+        </span>
+      </div>
+      {hint && (
+        <span className="text-[11px] text-text-tertiary italic hidden sm:inline">· {hint}</span>
+      )}
+      <div className="flex-1 h-px bg-border-subtle" />
+    </div>
   )
 }

@@ -3,7 +3,7 @@ import Modal from '../ui/Modal'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
-import { PROCESOS_POR_TIPO, TIPOS_PROCESO } from '../../constants/estados'
+import { procesosDisponibles, TIPOS_PROCESO } from '../../constants/estados'
 import type { Maquina, SeveridadAveria, TipoProceso } from '../../types/database'
 import toast from 'react-hot-toast'
 
@@ -38,7 +38,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   const trabajadores = useTrabajadoresStore((s) => s.trabajadores)
   const candidatos = trabajadores.filter((t) => t.activo && t.puede_operar)
 
-  const procesosDisponibles = PROCESOS_POR_TIPO[maquina.tipo]
+  const procesosOptions = procesosDisponibles(maquina)
 
   const [step, setStep] = useState<Step>('tecnico')
   const [tecnico, setTecnico] = useState<Trabajador | null>(null)
@@ -246,7 +246,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
             subtitle="Elige el tipo de trabajo que vas a realizar en esta máquina."
           >
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {procesosDisponibles.map((p) => {
+              {procesosOptions.map((p) => {
                 const meta = TIPOS_PROCESO[p]
                 const isSelected = tipoProceso === p
                 return (

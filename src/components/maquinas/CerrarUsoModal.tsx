@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Modal from '../ui/Modal'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
 import { toIsoDateTime, formatTime } from '../../lib/utils'
+import { tiposIncidenciaDisponibles } from '../../constants/estados'
 import type { Maquina, UsoEquipo } from '../../types/database'
 import toast from 'react-hot-toast'
 
@@ -39,14 +40,18 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
 
   const [step, setStep] = useState<Step>('cierre')
   const [tecnicoCierre, setTecnicoCierre] = useState<Trabajador | null>(null)
+  const [tipoIncidencia, setTipoIncidencia] = useState<string | null>(null)
   const [problema, setProblema] = useState('')
   const [showAjustes, setShowAjustes] = useState(false)
   const [horaAcabado, setHoraAcabado] = useState(nowTime())
+
+  const tiposIncidencia = useMemo(() => tiposIncidenciaDisponibles(maquina), [maquina])
 
   useEffect(() => {
     if (open) {
       setStep('cierre')
       setTecnicoCierre(null)
+      setTipoIncidencia(null)
       setProblema('')
       setShowAjustes(false)
       setHoraAcabado(nowTime())
@@ -60,7 +65,7 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
 
   const [submitting, setSubmitting] = useState(false)
 
-  const finalizar = async (res: 'ok' | 'ko', incidencias: string[] = []) => {
+  const finalizar = async (res: 'ok' | 'ko', incidencias: { tipo: string | null; descripcion: string }[] = []) => {
     if (!tecnicoCierre) return
     setSubmitting(true)
     await cerrarUso({
@@ -88,12 +93,12 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
     }
   }
 
+  /** El operario debe haber elegido un tipo Y haber escrito al menos algo. */
+  const puedeGuardarProblema = !!tipoIncidencia && problema.trim().length > 0
+
   const handleGuardarProblema = () => {
-    const incidencias = problema
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean)
-    finalizar('ko', incidencias.length > 0 ? incidencias : ['Incidencia sin descripción'])
+    if (!puedeGuardarProblema) return
+    finalizar('ko', [{ tipo: tipoIncidencia, descripcion: problema.trim() }])
   }
 
   const handleBack = () => {
@@ -197,23 +202,66 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
         {step === 'problema' && (
           <StepContent
             title="¿Qué pasó?"
-            subtitle="Escribe una línea por cada problema. Así el jefe puede revisarlo después."
+            subtitle="Primero elige el tipo de avería y después amplía la información."
           >
-            <textarea
-              value={problema}
-              onChange={(e) => setProblema(e.target.value)}
-              autoFocus
-              rows={5}
-              placeholder="Ejemplo:&#10;La fresa se rompió a los 20 minutos&#10;La pieza salió movida"
-              className="input-field resize-none text-base leading-relaxed"
-            />
-            <button
-              onClick={handleGuardarProblema}
-              disabled={submitting}
-              className="w-full mt-5 py-5 rounded-xl text-lg font-bold bg-averia text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-averia/20 disabled:opacity-50 disabled:cursor-wait"
-            >
-              {submitting ? 'Guardando...' : 'Guardar y cerrar'}
-            </button>
+            <div className="space-y-5">
+              {/* Paso 1: tipo de avería (categoría) */}
+              <div>
+                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">
+                  Tipo de avería <span className="text-averia">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {tiposIncidencia.map((t) => {
+                    const isSelected = tipoIncidencia === t
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setTipoIncidencia(t)}
+                        className={`
+                          px-4 py-3 rounded-xl border-2 text-left text-sm font-medium transition-all
+                          active:scale-[0.98]
+                          ${isSelected
+                            ? 'bg-averia/10 border-averia text-averia'
+                            : 'bg-surface-2 border-border-subtle text-text-primary hover:border-averia/40 hover:bg-surface-3'
+                          }
+                        `}
+                      >
+                        {isSelected && <span className="mr-1">✓</span>}
+                        {t}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Paso 2: detalle obligatorio */}
+              <div>
+                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">
+                  Cuéntanos qué pasó <span className="text-averia">*</span>
+                </label>
+                <textarea
+                  value={problema}
+                  onChange={(e) => setProblema(e.target.value)}
+                  rows={4}
+                  placeholder="Ejemplo: La fresa se rompió a los 20 minutos."
+                  className="input-field resize-none text-base leading-relaxed"
+                  disabled={!tipoIncidencia}
+                />
+                {!tipoIncidencia && (
+                  <p className="text-[11px] text-text-tertiary mt-1">
+                    Selecciona primero el tipo de avería para poder describir lo ocurrido.
+                  </p>
+                )}
+              </div>
+
+              <button
+                onClick={handleGuardarProblema}
+                disabled={submitting || !puedeGuardarProblema}
+                className="w-full py-5 rounded-xl text-lg font-bold bg-averia text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-averia/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Guardando...' : 'Guardar y cerrar'}
+              </button>
+            </div>
           </StepContent>
         )}
 

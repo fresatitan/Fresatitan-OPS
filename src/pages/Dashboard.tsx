@@ -6,11 +6,12 @@ import CompletedWorkCard from '../components/maquinas/CompletedWorkCard'
 import EnVivoPanel from '../components/maquinas/EnVivoPanel'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useAlertasRealtime } from '../hooks/useAlertasRealtime'
-import { TIPOS_MAQUINA_PLURAL } from '../constants/estados'
+import { TIPOS_MAQUINA_PLURAL, SUBTIPOS_FRESADORA } from '../constants/estados'
 import { toIsoDateTime } from '../lib/utils'
-import type { Maquina, TipoMaquina } from '../types/database'
+import type { Maquina, TipoMaquina, SubtipoFresadora } from '../types/database'
 
 const FAMILIAS: TipoMaquina[] = ['fresadora', 'sinterizadora', 'impresora_3d']
+const SUBFAMILIAS_FRESADORA: SubtipoFresadora[] = ['metal', 'seco', 'humedo']
 
 export default function Dashboard() {
   useAlertasRealtime()
@@ -159,6 +160,9 @@ function FamilySection({
   const label = TIPOS_MAQUINA_PLURAL[familia]
   const count = maquinas.length
 
+  // Para fresadoras agrupamos también por sub-familia (metal/seco/humedo)
+  const isFresadora = familia === 'fresadora'
+
   return (
     <section>
       <SectionTitle text={label} count={count} />
@@ -169,14 +173,84 @@ function FamilySection({
             Sin {label.toLowerCase()} dadas de alta todavía.
           </p>
         </div>
+      ) : isFresadora ? (
+        // Sub-secciones por sub-familia
+        <div className="space-y-5">
+          {SUBFAMILIAS_FRESADORA.map((sub) => {
+            const lista = maquinas
+              .filter((m) => m.subtipo === sub)
+              .sort((a, b) => a.codigo.localeCompare(b.codigo))
+            if (lista.length === 0) return null
+            return (
+              <div key={sub}>
+                <SubFamilyHeader subtipo={sub} count={lista.length} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {lista.map((m) => (
+                    <MaquinaWorkCard key={m.id} maquina={m} />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+          {/* Fresadoras sin sub-familia asignada (legacy) */}
+          {(() => {
+            const huerfanas = maquinas.filter((m) => !m.subtipo)
+            if (huerfanas.length === 0) return null
+            return (
+              <div>
+                <SubFamilyHeader subtipo={null} count={huerfanas.length} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {huerfanas.map((m) => (
+                    <MaquinaWorkCard key={m.id} maquina={m} />
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {maquinas.map((m) => (
-            <MaquinaWorkCard key={m.id} maquina={m} />
-          ))}
+          {maquinas
+            .sort((a, b) => a.codigo.localeCompare(b.codigo))
+            .map((m) => (
+              <MaquinaWorkCard key={m.id} maquina={m} />
+            ))}
         </div>
       )}
     </section>
+  )
+}
+
+function SubFamilyHeader({
+  subtipo,
+  count,
+}: {
+  subtipo: SubtipoFresadora | null
+  count: number
+}) {
+  const meta = subtipo
+    ? SUBTIPOS_FRESADORA[subtipo]
+    : { label: 'Sin sub-familia', short: 'SIN SUB-FAMILIA', description: '' }
+
+  // Color de acento por sub-familia
+  const accent =
+    subtipo === 'metal'  ? 'border-l-mantenimiento'
+    : subtipo === 'seco' ? 'border-l-primary'
+    : subtipo === 'humedo' ? 'border-l-activa'
+    : 'border-l-border-subtle'
+
+  return (
+    <div className="flex items-baseline gap-2 mb-2">
+      <div className={`pl-2 border-l-4 ${accent}`}>
+        <span className="text-[11px] font-mono uppercase tracking-widest text-text-secondary">
+          {meta.short}
+        </span>
+        <span className="ml-2 text-[10px] font-mono text-text-tertiary">{count}</span>
+      </div>
+      {meta.description && (
+        <span className="text-[10px] text-text-tertiary italic hidden sm:inline">· {meta.description}</span>
+      )}
+    </div>
   )
 }
 

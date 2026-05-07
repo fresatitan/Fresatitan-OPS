@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
 import { useWorkflowStore } from '../../store/workflowStore'
-import { TIPOS_MAQUINA } from '../../constants/estados'
-import type { Maquina, TipoMaquina } from '../../types/database'
+import { TIPOS_MAQUINA, SUBTIPOS_FRESADORA } from '../../constants/estados'
+import type { Maquina, TipoMaquina, SubtipoFresadora } from '../../types/database'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -18,6 +18,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
   const [codigo, setCodigo] = useState('')
   const [nombre, setNombre] = useState('')
   const [tipo, setTipo] = useState<TipoMaquina>('fresadora')
+  const [subtipo, setSubtipo] = useState<SubtipoFresadora | null>('seco')
   const [requierePreparacion, setRequierePreparacion] = useState(false)
   const [requiereLanzamiento, setRequiereLanzamiento] = useState(false)
   const [descripcion, setDescripcion] = useState('')
@@ -29,6 +30,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
       setNombre(initial?.nombre ?? '')
       const t = initial?.tipo ?? 'fresadora'
       setTipo(t)
+      setSubtipo(initial?.subtipo ?? (t === 'fresadora' ? 'seco' : null))
       // Default: sinterizadoras requieren preparación, fresadoras no
       setRequierePreparacion(initial?.requiere_preparacion ?? (t === 'sinterizadora'))
       setRequiereLanzamiento(initial?.requiere_lanzamiento ?? false)
@@ -42,6 +44,18 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
     setTipo(newTipo)
     if (!initial) {
       setRequierePreparacion(newTipo === 'sinterizadora')
+      setSubtipo(newTipo === 'fresadora' ? 'seco' : null)
+      // Lanzamiento por defecto en fresadora METAL
+      setRequiereLanzamiento(false)
+    }
+  }
+
+  const handleSubtipoChange = (newSubtipo: SubtipoFresadora) => {
+    setSubtipo(newSubtipo)
+    // Auto-defaults solo en alta nueva
+    if (!initial) {
+      // METAL → CNC con lanzamiento manual; SECO/HÚMEDO → arranque automático
+      setRequiereLanzamiento(newSubtipo === 'metal')
     }
   }
 
@@ -53,6 +67,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
       codigo: codigo.trim(),
       nombre: nombre.trim(),
       tipo,
+      subtipo: tipo === 'fresadora' ? subtipo : null,
       requiere_preparacion: requierePreparacion,
       requiere_lanzamiento: requiereLanzamiento,
       descripcion: descripcion.trim() || null,
@@ -109,6 +124,33 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
             ))}
           </div>
         </Field>
+
+        {/* Selector de sub-familia: solo cuando tipo === fresadora */}
+        {tipo === 'fresadora' && (
+          <Field label="Sub-familia">
+            <div className="grid grid-cols-3 gap-2">
+              {(['metal', 'seco', 'humedo'] as SubtipoFresadora[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleSubtipoChange(s)}
+                  className={`
+                    px-3 py-2 rounded border text-xs font-medium transition-colors
+                    ${subtipo === s
+                      ? 'bg-primary-muted border-primary/30 text-primary'
+                      : 'bg-surface-3 border-border-subtle text-text-secondary hover:text-text-primary'
+                    }
+                  `}
+                >
+                  {SUBTIPOS_FRESADORA[s].label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-text-tertiary mt-1">
+              METAL: Fanuc / Biomill (CNC). SECO: UP3D, P53. HÚMEDO: Biomill, DS UP3D.
+              Determina los procesos disponibles al iniciar un uso.
+            </p>
+          </Field>
+        )}
 
         <Field label="Requiere preparación">
           <button

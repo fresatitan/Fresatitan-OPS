@@ -26,13 +26,23 @@ const TIPO_LABEL: Record<TipoMaquina, string> = {
 }
 
 const PROCESO_LABEL: Record<TipoProceso, string> = {
+  // Vigentes (mayo 2026)
+  titanio: 'Titanio',
+  cr_co: 'Cr-Co',
+  circonio: 'Circonio',
+  pmma: 'PMMA',
+  disilicato: 'Disilicato',
+  composite: 'Composite',
+  cr_co_rigido: 'Cr-Co rígido',
+  cr_co_flexible: 'Cr-Co flexible',
+  otro: 'Otro',
+  // Históricos (deprecated)
   fresado: 'Fresado',
   sinterizado: 'Sinterizado',
   sinterofresado: 'Sinterofresado',
   impresion3d: 'Impresión 3D',
   ferulas: 'Férulas',
   blender: 'Blender',
-  otro: 'Otro',
 }
 
 // =============================================================================

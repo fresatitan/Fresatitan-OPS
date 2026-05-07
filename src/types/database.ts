@@ -7,14 +7,36 @@ export type ResultadoUso = 'ok' | 'ko' | 'pendiente'
 export type TipoMantenimiento = 'preventivo' | 'correctivo' | 'predictivo'
 export type SeveridadAveria = 'critica' | 'leve'
 export type TipoDocumentoAveria = 'parte_tecnico' | 'factura' | 'foto' | 'otro'
+
+// Sub-familia para fresadoras (metal / seco / húmedo). NULL para sinterizadoras
+// e impresoras 3D (no aplica).
+export type SubtipoFresadora = 'metal' | 'seco' | 'humedo'
+
+// Procesos disponibles. La lista contiene tanto los valores nuevos (mayo 2026)
+// agrupados por sub-familia como los antiguos que se mantienen para usos
+// históricos previos al rediseño.
 export type TipoProceso =
+  // Fresadora METAL
+  | 'titanio'
+  | 'cr_co'
+  // Fresadora SECO
+  | 'circonio'
+  | 'pmma'
+  // Fresadora HÚMEDO
+  | 'disilicato'
+  | 'composite'
+  // Sinterizadora
+  | 'cr_co_rigido'
+  | 'cr_co_flexible'
+  // Genéricos
+  | 'otro'
+  // === Valores históricos (deprecated, mantenidos para compatibilidad) ===
   | 'fresado'
   | 'sinterizado'
   | 'sinterofresado'
   | 'impresion3d'
   | 'ferulas'
   | 'blender'
-  | 'otro'
 
 export interface Profile {
   id: string
@@ -33,6 +55,7 @@ export interface Maquina {
   codigo: string                    // ej. REF-039
   nombre: string
   tipo: TipoMaquina
+  subtipo: SubtipoFresadora | null  // sólo aplica a fresadoras (metal/seco/humedo)
   numero_serie: string | null
   descripcion: string | null
   ubicacion: string | null
@@ -95,6 +118,7 @@ export interface Incidencia {
   id: string
   uso_id: string
   descripcion: string
+  tipo: string | null     // categoría elegida del desplegable (ej. 'Rotura de herramienta')
   created_at: string
 }
 
