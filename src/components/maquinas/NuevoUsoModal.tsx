@@ -165,11 +165,15 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
           >
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">¿Quién reporta?</label>
+                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">
+                  ¿Quién reporta? <span className="text-averia">*</span>
+                </label>
                 <TrabajadorGrid candidatos={candidatos} selected={averiaTecnico?.id ?? null} onSelect={setAveriaTecnico} />
               </div>
               <div>
-                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">¿Qué ha pasado?</label>
+                <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">
+                  ¿Qué ha pasado? <span className="text-averia">*</span>
+                </label>
                 <textarea
                   value={averiaMotivo}
                   onChange={(e) => setAveriaMotivo(e.target.value)}
@@ -201,6 +205,17 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
                   />
                 </div>
               </div>
+
+              {/* Mensaje claro de qué falta para activar el botón */}
+              {(!averiaTecnico || !averiaMotivo.trim()) && (
+                <div className="rounded-lg border border-averia/30 bg-averia/10 px-3 py-2 text-xs text-averia leading-relaxed">
+                  Para enviar el aviso falta:
+                  {!averiaTecnico && <span className="ml-1.5 inline-block font-semibold">elegir quién reporta</span>}
+                  {!averiaTecnico && !averiaMotivo.trim() && <span className="opacity-60"> y </span>}
+                  {!averiaMotivo.trim() && <span className="ml-1.5 inline-block font-semibold">describir qué ha pasado</span>}
+                  .
+                </div>
+              )}
 
               <button
                 onClick={handleReportarAveria}
