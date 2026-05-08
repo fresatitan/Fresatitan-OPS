@@ -186,8 +186,17 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
 
               <div>
                 <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">
-                  ¿Cómo de grave es? <span className="normal-case text-text-tertiary">(tu propuesta, el admin decide)</span>
+                  ¿Cómo de grave es?
                 </label>
+
+                {/* Cuadro informativo: deja claro que es solo una propuesta y qué efecto tiene */}
+                <div className="mb-3 rounded-lg border border-border-subtle bg-surface-3 px-3 py-2 text-xs text-text-secondary leading-relaxed">
+                  <span className="mr-1">💡</span>
+                  Esto es <strong className="text-text-primary">tu propuesta</strong>. La máquina seguirá
+                  operativa hasta que el admin revise el aviso. Solo se bloqueará si el admin confirma
+                  como <strong className="text-averia">Crítica</strong>.
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <SeveridadOption
                     active={averiaSeveridad === 'critica'}
@@ -195,6 +204,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
                     tone="critica"
                     title="Crítica"
                     description="La máquina no se puede usar"
+                    effect="Si el admin lo confirma, quedará bloqueada"
                   />
                   <SeveridadOption
                     active={averiaSeveridad === 'leve'}
@@ -202,6 +212,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
                     tone="leve"
                     title="Leve"
                     description="Se puede seguir usando, pero hay algo raro"
+                    effect="La máquina queda libre, solo es un aviso"
                   />
                 </div>
               </div>
@@ -470,12 +481,15 @@ function SeveridadOption({
   tone,
   title,
   description,
+  effect,
 }: {
   active: boolean
   onClick: () => void
   tone: 'critica' | 'leve'
   title: string
   description: string
+  /** Microcopy explicando qué pasa con la máquina si el admin confirma esta severidad */
+  effect?: string
 }) {
   const palette = tone === 'critica'
     ? { border: 'border-averia', bg: 'bg-averia/10', text: 'text-averia', icon: '🔴' }
@@ -498,6 +512,11 @@ function SeveridadOption({
         <span className={`text-base font-bold ${active ? palette.text : 'text-text-primary'}`}>{title}</span>
       </div>
       <span className="text-xs text-text-tertiary leading-snug">{description}</span>
+      {effect && (
+        <span className={`text-[10px] mt-1 italic leading-snug ${active ? palette.text : 'text-text-tertiary'} opacity-80`}>
+          → {effect}
+        </span>
+      )}
     </button>
   )
 }

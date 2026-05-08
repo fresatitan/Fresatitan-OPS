@@ -331,6 +331,21 @@ function AveriaCard({
   const propuestaLabel = evento.severidad ? SEVERIDADES[evento.severidad].label : null
 
   const handleConfirmar = async (severidad: SeveridadAveria) => {
+    // Si la acción va a bloquear la máquina (confirmar crítica cuando todavía
+    // no estaba en avería) pedimos confirmación explícita al admin para
+    // evitar bloqueos por error.
+    const vaABloquearLaMaquina =
+      severidad === 'critica' && maquina.estado_actual !== 'avería'
+
+    if (vaABloquearLaMaquina) {
+      const ok = window.confirm(
+        `Vas a bloquear la máquina ${maquina.codigo} · ${maquina.nombre}.\n\n` +
+        `Los trabajadores no podrán usarla hasta que marques esta avería como resuelta.\n\n` +
+        `¿Continuar?`,
+      )
+      if (!ok) return
+    }
+
     await confirmarSeveridad(evento.id, severidad, adminUser?.id ?? null)
   }
 
@@ -405,35 +420,47 @@ function AveriaCard({
       {/* Acciones */}
       <div className="mt-3 grid gap-2">
         {variant === 'pendiente' && (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleConfirmar('critica')}
-              className="px-3 py-2.5 rounded text-xs font-semibold bg-averia/15 border border-averia/40 text-averia hover:bg-averia/25 transition-colors"
-            >
-              Confirmar crítica
-            </button>
-            <button
-              onClick={() => handleConfirmar('leve')}
-              className="px-3 py-2.5 rounded text-xs font-semibold bg-parada/15 border border-parada/40 text-parada hover:bg-parada/25 transition-colors"
-            >
-              Confirmar leve
-            </button>
-          </div>
+          <>
+            {/* Banner informativo solo en pendientes: explica el efecto de cada decisión */}
+            <div className="rounded border border-border-subtle bg-surface-3/40 px-3 py-2 text-[11px] text-text-secondary leading-snug mb-1">
+              Decide el efecto sobre la máquina:{' '}
+              <strong className="text-averia">crítica</strong> la bloquea ·{' '}
+              <strong className="text-parada">leve</strong> la deja operativa.
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleConfirmar('critica')}
+                className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded text-xs font-semibold bg-averia/15 border border-averia/40 text-averia hover:bg-averia/25 transition-colors"
+              >
+                <span>Confirmar crítica</span>
+                <span className="text-[9px] font-normal opacity-80">Bloqueará la máquina</span>
+              </button>
+              <button
+                onClick={() => handleConfirmar('leve')}
+                className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded text-xs font-semibold bg-parada/15 border border-parada/40 text-parada hover:bg-parada/25 transition-colors"
+              >
+                <span>Confirmar leve</span>
+                <span className="text-[9px] font-normal opacity-80">Máquina sigue operativa</span>
+              </button>
+            </div>
+          </>
         )}
         {variant === 'critica' && (
           <button
             onClick={() => handleConfirmar('leve')}
-            className="px-3 py-2.5 rounded text-xs font-semibold bg-parada/15 border border-parada/40 text-parada hover:bg-parada/25 transition-colors"
+            className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded text-xs font-semibold bg-parada/15 border border-parada/40 text-parada hover:bg-parada/25 transition-colors"
           >
-            Reclasificar como leve (desbloquea máquina)
+            <span>Reclasificar como leve</span>
+            <span className="text-[9px] font-normal opacity-80">Desbloquea la máquina</span>
           </button>
         )}
         {variant === 'leve' && (
           <button
             onClick={() => handleConfirmar('critica')}
-            className="px-3 py-2.5 rounded text-xs font-semibold bg-averia/15 border border-averia/40 text-averia hover:bg-averia/25 transition-colors"
+            className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded text-xs font-semibold bg-averia/15 border border-averia/40 text-averia hover:bg-averia/25 transition-colors"
           >
-            Escalar a crítica (bloquea máquina)
+            <span>Escalar a crítica</span>
+            <span className="text-[9px] font-normal opacity-80">Bloqueará la máquina</span>
           </button>
         )}
         <button
