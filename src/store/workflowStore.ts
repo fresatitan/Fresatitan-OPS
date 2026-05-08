@@ -474,9 +474,30 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       ),
     }))
 
-    // Si el uso se ha cerrado en KO, notificar a los admins por email.
-    // No bloqueamos ni rompemos el flujo si la notificación falla.
+    // Si el uso se ha cerrado en KO:
+    //   1. Crear automáticamente una "avería pendiente de revisar" (severidad
+    //      propuesta = leve por defecto, ya que la máquina llegó a completar
+    //      el trabajo). Así aparece en /alertas en la sección Pendientes con
+    //      el badge rojo pulsante, y deja de quedar enterrada en el histórico.
+    //      La máquina NO se bloquea — el admin decide al revisar.
+    //   2. Notificar a los admins por email (best-effort).
     if (resultado === 'ko') {
+      const incidenciaPrincipal = incidenciasLimpias[0]
+      const motivoAveria = incidenciaPrincipal
+        ? `Cierre KO · ${incidenciaPrincipal.tipo ? `[${incidenciaPrincipal.tipo}] ` : ''}${incidenciaPrincipal.descripcion}`
+        : 'Cierre KO sin detalle'
+
+      supabase
+        .rpc('report_maquina_averia', {
+          p_maquina_id: uso.maquina_id,
+          p_motivo: motivoAveria,
+          p_usuario_id: toValidUuid(tecnico_acabado_id),
+          p_severidad_propuesta: 'leve',
+        })
+        .then(({ error }) => {
+          if (error) console.error('[cerrarUso] RPC report_maquina_averia (KO) failed (non-fatal):', error)
+        })
+
       supabase.functions
         .invoke('notify-alerta', { body: { event: 'uso_ko', uso_id } })
         .catch((e) => console.error('[cerrarUso] notify-alerta failed (non-fatal):', e))
