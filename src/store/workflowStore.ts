@@ -177,6 +177,17 @@ interface WorkflowState {
 
   // Mantenimientos
   registrarMantenimiento: (input: NuevoMantenimientoInput) => Promise<string | null>
+  /**
+   * Cierra el mantenimiento abierto de una máquina:
+   *   · Actualiza el último mantenimiento (observaciones, validador, validado=true)
+   *   · Devuelve la máquina al estado 'parada' (operativa)
+   * Devuelve el id del mantenimiento actualizado, o null si no había mantenimiento abierto.
+   */
+  finalizarMantenimiento: (input: {
+    maquinaId: string
+    observacionesFin?: string | null
+    verificadoPorId?: string | null
+  }) => Promise<string | null>
 
   // Planes de mantenimiento / revisiones programadas
   crearPlanMantenimiento: (input: NuevoPlanInput) => Promise<string | null>
@@ -652,6 +663,82 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       mantenimientos: [mant, ...s.mantenimientos.filter((m) => m.id !== mant.id)],
     }))
     return mant.id
+  },
+
+  finalizarMantenimiento: async ({ maquinaId, observacionesFin, verificadoPorId }) => {
+    // Buscamos el mantenimiento más reciente de esta máquina que aún no
+    // esté validado — ese es el "mantenimiento abierto" desde el punto de
+    // vista del modelo (no hay columna hora_fin en mantenimientos, así que
+    // usamos `validado` como bandera de cierre).
+    const ultimo = get()
+      .mantenimientos
+      .filter((m) => m.maquina_id === maquinaId && !m.validado)
+      .sort((a, b) => `${b.fecha}T${b.created_at}`.localeCompare(`${a.fecha}T${a.created_at}`))[0]
+
+    const patch = {
+      validado: true,
+      ...(observacionesFin !== undefined && observacionesFin !== null
+        ? { observaciones: observacionesFin.trim() || null }
+        : {}),
+      ...(verificadoPorId !== undefined
+        ? { persona_verificadora_id: toValidUuid(verificadoPorId) }
+        : {}),
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      // Fallback in-memory
+      set((s) => ({
+        mantenimientos: ultimo
+          ? s.mantenimientos.map((m) => (m.id === ultimo.id ? { ...m, ...patch, updated_at: new Date().toISOString() } : m))
+          : s.mantenimientos,
+        maquinas: s.maquinas.map((m) =>
+          m.id === maquinaId && m.estado_actual === 'mantenimiento'
+            ? { ...m, estado_actual: 'parada' as EstadoMaquina }
+            : m,
+        ),
+      }))
+      return ultimo?.id ?? null
+    }
+
+    // Optimistic local update — devolvemos la máquina a 'parada' al instante
+    const prevMaquinas = get().maquinas
+    const prevMantenimientos = get().mantenimientos
+    set((s) => ({
+      mantenimientos: ultimo
+        ? s.mantenimientos.map((m) => (m.id === ultimo.id ? { ...m, ...patch, updated_at: new Date().toISOString() } : m))
+        : s.mantenimientos,
+      maquinas: s.maquinas.map((m) =>
+        m.id === maquinaId && m.estado_actual === 'mantenimiento'
+          ? { ...m, estado_actual: 'parada' as EstadoMaquina }
+          : m,
+      ),
+    }))
+
+    // 1. Actualizar el último mantenimiento (si existía)
+    if (ultimo) {
+      const { error: mantErr } = await supabase
+        .from('mantenimientos')
+        .update(patch)
+        .eq('id', ultimo.id)
+      if (mantErr) {
+        console.error('[finalizarMantenimiento] update mantenimiento error:', mantErr)
+        set({ mantenimientos: prevMantenimientos, maquinas: prevMaquinas, error: mantErr.message })
+        return null
+      }
+    }
+
+    // 2. Devolver la máquina al estado 'parada'
+    const { error: maqErr } = await supabase
+      .from('maquinas')
+      .update({ estado_actual: 'parada' })
+      .eq('id', maquinaId)
+    if (maqErr) {
+      console.error('[finalizarMantenimiento] update maquina error:', maqErr)
+      set({ maquinas: prevMaquinas, error: maqErr.message })
+      return null
+    }
+
+    return ultimo?.id ?? null
   },
 
   // ---------------------------------------------------------------------------

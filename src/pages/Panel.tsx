@@ -6,6 +6,7 @@ import { toIsoDateTime } from '../lib/utils'
 import NuevoUsoModal from '../components/maquinas/NuevoUsoModal'
 import CerrarUsoModal from '../components/maquinas/CerrarUsoModal'
 import HistorialMantenimientosModal from '../components/maquinas/HistorialMantenimientosModal'
+import FinalizarMantenimientoModal from '../components/maquinas/FinalizarMantenimientoModal'
 import SeleccionTipoTrabajoModal from '../components/panel/SeleccionTipoTrabajoModal'
 import StartMantenimientoModal from '../components/panel/StartMantenimientoModal'
 import StartPreparacionModal from '../components/panel/StartPreparacionModal'
@@ -45,6 +46,8 @@ export default function Panel() {
   const [averiaFor, setAveriaFor] = useState<Maquina | null>(null)
   // Historial de mantenimientos (solo lectura) abierto desde el selector
   const [historialFor, setHistorialFor] = useState<Maquina | null>(null)
+  // Finalizar mantenimiento abierto: card en estado 'mantenimiento' → modal
+  const [finalizarMantFor, setFinalizarMantFor] = useState<Maquina | null>(null)
 
   // Solo máquinas operativas (Lilian queda fuera del panel)
   const visibles = useMemo(() => maquinas.filter((m) => m.activa), [maquinas])
@@ -64,6 +67,9 @@ export default function Panel() {
     } else if (m.estado_actual === 'activa') {
       const uso = getUso(m.id)
       if (uso) setCerrarFor({ maquina: m, uso })
+    } else if (m.estado_actual === 'mantenimiento') {
+      // Toca una máquina bloqueada por mantenimiento → modal para finalizarlo
+      setFinalizarMantFor(m)
     }
   }
 
@@ -152,6 +158,13 @@ export default function Panel() {
           open={!!historialFor}
           onClose={() => setHistorialFor(null)}
           maquina={historialFor}
+        />
+      )}
+      {finalizarMantFor && (
+        <FinalizarMantenimientoModal
+          open={!!finalizarMantFor}
+          onClose={() => setFinalizarMantFor(null)}
+          maquina={finalizarMantFor}
         />
       )}
       {nuevoFor && (
@@ -436,9 +449,10 @@ function PlantMaquinaCard({
   const isMant      = maquina.estado_actual === 'mantenimiento'
   const isInactiva  = maquina.estado_actual === 'inactiva'
 
-  // Estados "bloqueados" (no usable) → render totalmente distinto y dominante
+  // Estados "bloqueados" (no usable) → render totalmente distinto y dominante.
+  // Mantenimiento sí es clickable porque desde ahí se finaliza la intervención.
   if (isAveria || isMant || isInactiva) {
-    return <BlockedMaquinaCard maquina={maquina} />
+    return <BlockedMaquinaCard maquina={maquina} onClick={isMant ? onClick : undefined} />
   }
 
   // ¿Hay avería reportada pero aún no bloqueante? (pendiente de revisión por admin
@@ -569,8 +583,11 @@ function PlantMaquinaCard({
  * Card para estados bloqueados (avería / mantenimiento / inactiva).
  * Diseño completamente distinto al de máquinas operativas: el estado es lo
  * primero que ve el trabajador, imposible confundirlo con una máquina libre.
+ *
+ * Excepción: las máquinas en `mantenimiento` SÍ son tocables — desde ahí
+ * se abre el modal para finalizar el mantenimiento y devolverlas a operativa.
  */
-function BlockedMaquinaCard({ maquina }: { maquina: Maquina }) {
+function BlockedMaquinaCard({ maquina, onClick }: { maquina: Maquina; onClick?: () => void }) {
   const isAveria   = maquina.estado_actual === 'avería'
   const isMant     = maquina.estado_actual === 'mantenimiento'
   const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
@@ -613,11 +630,16 @@ function BlockedMaquinaCard({ maquina }: { maquina: Maquina }) {
     ? 'En mantenimiento'
     : 'Máquina retirada del servicio'
 
+  const clickable = !!onClick
+  const Comp: 'button' | 'div' = clickable ? 'button' : 'div'
+
   return (
-    <div
+    <Comp
+      onClick={clickable ? onClick : undefined}
+      type={clickable ? 'button' : undefined}
       className={`
         relative rounded-2xl border-2 p-5 text-left w-full min-h-[180px] flex flex-col
-        cursor-not-allowed
+        ${clickable ? 'cursor-pointer hover:bg-mantenimiento/15 active:scale-[0.98] transition-all' : 'cursor-not-allowed'}
         ${palette.bg} ${palette.border}
         ${isAveria ? 'animate-averia' : ''}
       `}
@@ -679,7 +701,16 @@ function BlockedMaquinaCard({ maquina }: { maquina: Maquina }) {
           )}
         </div>
       )}
-    </div>
+
+      {/* CTA visible si la card es clickable (mantenimiento) */}
+      {clickable && (
+        <div className="mt-3 pt-3 border-t border-mantenimiento/20 text-center">
+          <span className="text-sm font-semibold text-mantenimiento">
+            Toca para finalizar mantenimiento →
+          </span>
+        </div>
+      )}
+    </Comp>
   )
 }
 
