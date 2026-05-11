@@ -109,6 +109,29 @@ export interface AveriaPaso {
   created_at: string
 }
 
+/** Unidad de un plan de revisión: por tiempo (días/semanas/meses) o por usos. */
+export type PlanUnidad = 'dias' | 'semanas' | 'meses' | 'usos'
+
+/**
+ * Plan de revisión / mantenimiento programado de una máquina.
+ * El cálculo de "próxima revisión" se hace en cliente a partir de
+ * ultima_ejecucion_en / ultima_ejecucion_uso_count y el intervalo (cada_n + unidad).
+ */
+export interface MantenimientoPlan {
+  id: string
+  maquina_id: string
+  nombre: string
+  descripcion: string | null
+  unidad: PlanUnidad
+  cada_n: number
+  ultima_ejecucion_en: string | null            // ISO timestamp
+  ultima_ejecucion_uso_count: number | null
+  activo: boolean
+  creado_por: string | null
+  created_at: string
+  updated_at: string
+}
+
 // Un "uso de equipo" = una tanda preparación → acabado sobre una máquina
 export interface UsoEquipo {
   id: string
@@ -145,6 +168,8 @@ export interface Mantenimiento {
   persona_verificadora_id: string | null
   validado: boolean
   observaciones: string | null
+  /** Si está vinculado a un plan de revisión, al insertar se resetea el contador del plan */
+  plan_id: string | null
   created_at: string
   updated_at: string
 }

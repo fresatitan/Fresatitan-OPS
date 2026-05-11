@@ -15,6 +15,8 @@ import type {
   SeveridadAveria,
   AveriaDocumento,
   AveriaPaso,
+  MantenimientoPlan,
+  PlanUnidad,
   Preparacion,
   TipoProceso,
 } from '../types/database'
@@ -111,6 +113,28 @@ export interface NuevoMantenimientoInput {
   persona_encargada_id: string
   persona_verificadora_id?: string | null
   observaciones?: string | null
+  /** Si va asociado a un plan, lo vinculamos para que el trigger resetee el contador */
+  plan_id?: string | null
+}
+
+export interface NuevoPlanInput {
+  maquina_id: string
+  nombre: string
+  descripcion?: string | null
+  unidad: PlanUnidad
+  cada_n: number
+  creado_por?: string | null
+}
+
+/** Estado calculado del cumplimiento de un plan */
+export interface PlanEstado {
+  plan: MantenimientoPlan
+  /** Días restantes (positivos = pendientes; negativos = vencidos) o null si plan por usos */
+  diasRestantes: number | null
+  /** Usos restantes (positivos = pendientes; negativos = vencidos) o null si plan por tiempo */
+  usosRestantes: number | null
+  vencido: boolean
+  proximaFechaIso: string | null  // sólo en planes por tiempo
 }
 
 // -----------------------------------------------------------------------------
@@ -124,6 +148,7 @@ interface WorkflowState {
   estadosHistorial: MaquinaEstado[]
   averiaDocumentos: AveriaDocumento[]
   averiaPasos: AveriaPaso[]
+  mantenimientoPlanes: MantenimientoPlan[]
   preparaciones: Preparacion[]
 
   loading: boolean
@@ -141,6 +166,11 @@ interface WorkflowState {
 
   // Mantenimientos
   registrarMantenimiento: (input: NuevoMantenimientoInput) => Promise<string | null>
+
+  // Planes de mantenimiento / revisiones programadas
+  crearPlanMantenimiento: (input: NuevoPlanInput) => Promise<string | null>
+  actualizarPlanMantenimiento: (id: string, patch: Partial<Pick<MantenimientoPlan, 'nombre' | 'descripcion' | 'unidad' | 'cada_n' | 'activo'>>) => Promise<void>
+  eliminarPlanMantenimiento: (id: string) => Promise<void>
 
   // Preparaciones — registro de limpieza puntual
   registrarPreparacion: (input: { maquinaId: string; trabajadorId: string | null; observaciones?: string | null }) => Promise<string | null>
@@ -183,6 +213,12 @@ interface WorkflowState {
   refetchAveriaDocumentos: () => Promise<void>
   /** Última preparación registrada de una máquina (la más reciente, si hay) */
   getUltimaPreparacion: (maquinaId: string) => Preparacion | null
+  /** Planes de revisión activos de una máquina */
+  getPlanesByMaquina: (maquinaId: string) => MantenimientoPlan[]
+  /** Estado calculado de cada plan (cuánto falta, si está vencido). Devuelve {} si no hay planes */
+  getEstadoPlan: (plan: MantenimientoPlan) => PlanEstado
+  /** Lista de planes vencidos a día de hoy (incluye plan + estado calculado) */
+  getPlanesVencidos: () => PlanEstado[]
   /**
    * True si la máquina necesita una preparación ANTES de poder iniciar un uso.
    * Regla: la última preparación debe ser posterior al último uso cerrado
@@ -202,6 +238,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   estadosHistorial: [],
   averiaDocumentos: [],
   averiaPasos: [],
+  mantenimientoPlanes: [],
   preparaciones: [],
 
   loading: false,
@@ -225,6 +262,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         estadosHistorial: [],
         averiaDocumentos: [],
         averiaPasos: [],
+        mantenimientoPlanes: [],
         preparaciones: [],
         loading: false,
         initialized: true,
@@ -233,7 +271,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
 
     try {
-      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes, docsRes, pasosRes, prepsRes] = await Promise.all([
+      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes, docsRes, pasosRes, planesRes, prepsRes] = await Promise.all([
         supabase.from('maquinas').select('*').order('codigo'),
         supabase.from('usos_equipo').select('*').order('created_at', { ascending: false }),
         supabase.from('incidencias').select('*').order('created_at', { ascending: false }),
@@ -242,6 +280,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         supabase.from('averia_documentos').select('*').order('subido_en', { ascending: false }),
         // averia_pasos puede no existir todavía en BBDD antiguas; toleramos el fallo
         supabase.from('averia_pasos').select('*').order('created_at', { ascending: true }).limit(2000),
+        // mantenimiento_planes igual — tolerante si la migración 0022 no se ha aplicado
+        supabase.from('mantenimiento_planes').select('*').order('created_at', { ascending: false }),
         supabase.from('preparaciones').select('*').order('fecha', { ascending: false }).order('hora', { ascending: false }).limit(500),
       ])
 
@@ -262,6 +302,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         estadosHistorial: (estadosRes.data ?? []) as MaquinaEstado[],
         averiaDocumentos: (docsRes.data ?? []) as AveriaDocumento[],
         averiaPasos: pasosRes.error ? [] : ((pasosRes.data ?? []) as AveriaPaso[]),
+        mantenimientoPlanes: planesRes.error ? [] : ((planesRes.data ?? []) as MantenimientoPlan[]),
         preparaciones: (prepsRes.data ?? []) as Preparacion[],
         loading: false,
         initialized: true,
@@ -353,6 +394,15 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           .limit(2000)
           .then(({ data, error }) => {
             if (!error && data) set({ averiaPasos: data as AveriaPaso[] })
+          })
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mantenimiento_planes' }, () => {
+        supabase!
+          .from('mantenimiento_planes')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .then(({ data, error }) => {
+            if (!error && data) set({ mantenimientoPlanes: data as MantenimientoPlan[] })
           })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'preparaciones' }, () => {
@@ -561,6 +611,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       persona_verificadora_id: input.persona_verificadora_id ?? null,
       validado: false,
       observaciones: input.observaciones ?? null,
+      plan_id: input.plan_id ?? null,
     }
 
     if (!isSupabaseConfigured || !supabase) {
@@ -590,6 +641,84 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       mantenimientos: [mant, ...s.mantenimientos.filter((m) => m.id !== mant.id)],
     }))
     return mant.id
+  },
+
+  // ---------------------------------------------------------------------------
+  // Planes de mantenimiento / revisiones programadas
+  // ---------------------------------------------------------------------------
+  crearPlanMantenimiento: async (input) => {
+    const payload = {
+      maquina_id: input.maquina_id,
+      nombre: input.nombre.trim(),
+      descripcion: input.descripcion?.trim() || null,
+      unidad: input.unidad,
+      cada_n: input.cada_n,
+      creado_por: toValidUuid(input.creado_por ?? null),
+      activo: true,
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      const id = newLocalId('pl')
+      const ts = new Date().toISOString()
+      const plan: MantenimientoPlan = {
+        id, ...payload, ultima_ejecucion_en: null, ultima_ejecucion_uso_count: null,
+        created_at: ts, updated_at: ts,
+      }
+      set((s) => ({ mantenimientoPlanes: [plan, ...s.mantenimientoPlanes] }))
+      return id
+    }
+
+    const { data, error } = await supabase
+      .from('mantenimiento_planes')
+      .insert(payload)
+      .select()
+      .single()
+    if (error) {
+      console.error('[crearPlanMantenimiento] error:', error)
+      set({ error: error.message })
+      return null
+    }
+    const plan = data as MantenimientoPlan
+    set((s) => ({
+      mantenimientoPlanes: [plan, ...s.mantenimientoPlanes.filter((p) => p.id !== plan.id)],
+    }))
+    return plan.id
+  },
+
+  actualizarPlanMantenimiento: async (id, patch) => {
+    if (!isSupabaseConfigured || !supabase) {
+      set((s) => ({
+        mantenimientoPlanes: s.mantenimientoPlanes.map((p) =>
+          p.id === id ? { ...p, ...patch, updated_at: new Date().toISOString() } : p,
+        ),
+      }))
+      return
+    }
+    const prev = get().mantenimientoPlanes
+    set((s) => ({
+      mantenimientoPlanes: s.mantenimientoPlanes.map((p) =>
+        p.id === id ? { ...p, ...patch, updated_at: new Date().toISOString() } : p,
+      ),
+    }))
+    const { error } = await supabase.from('mantenimiento_planes').update(patch).eq('id', id)
+    if (error) {
+      console.error('[actualizarPlanMantenimiento] error:', error)
+      set({ mantenimientoPlanes: prev, error: error.message })
+    }
+  },
+
+  eliminarPlanMantenimiento: async (id) => {
+    if (!isSupabaseConfigured || !supabase) {
+      set((s) => ({ mantenimientoPlanes: s.mantenimientoPlanes.filter((p) => p.id !== id) }))
+      return
+    }
+    const prev = get().mantenimientoPlanes
+    set((s) => ({ mantenimientoPlanes: s.mantenimientoPlanes.filter((p) => p.id !== id) }))
+    const { error } = await supabase.from('mantenimiento_planes').delete().eq('id', id)
+    if (error) {
+      console.error('[eliminarPlanMantenimiento] error:', error)
+      set({ mantenimientoPlanes: prev, error: error.message })
+    }
   },
 
   // ---------------------------------------------------------------------------
@@ -1116,6 +1245,58 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   getUltimaPreparacion: (maquinaId) =>
     get().preparaciones.find((p) => p.maquina_id === maquinaId) ?? null,
+
+  getPlanesByMaquina: (maquinaId) =>
+    get().mantenimientoPlanes
+      .filter((p) => p.maquina_id === maquinaId && p.activo)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+
+  getEstadoPlan: (plan) => {
+    const ahora = Date.now()
+    const baseTs = plan.ultima_ejecucion_en ? new Date(plan.ultima_ejecucion_en).getTime() : null
+
+    if (plan.unidad === 'usos') {
+      // Usos cerrados de la máquina (no pendientes)
+      const usosCerrados = get().usos.filter(
+        (u) => u.maquina_id === plan.maquina_id && u.resultado !== 'pendiente',
+      ).length
+      const desde = plan.ultima_ejecucion_uso_count ?? 0
+      const realizados = Math.max(0, usosCerrados - desde)
+      const usosRestantes = plan.cada_n - realizados
+      return {
+        plan,
+        diasRestantes: null,
+        usosRestantes,
+        vencido: usosRestantes <= 0,
+        proximaFechaIso: null,
+      }
+    }
+
+    // Planes por tiempo: calcular siguiente fecha
+    const baseDate = baseTs ?? new Date(plan.created_at).getTime()
+    const msPorDia = 86_400_000
+    const intervaloMs =
+      plan.unidad === 'dias'    ? plan.cada_n * msPorDia
+    : plan.unidad === 'semanas' ? plan.cada_n * 7 * msPorDia
+    : /* meses */                  plan.cada_n * 30 * msPorDia
+    const proximaTs = baseDate + intervaloMs
+    const diasRestantes = Math.ceil((proximaTs - ahora) / msPorDia)
+    return {
+      plan,
+      diasRestantes,
+      usosRestantes: null,
+      vencido: diasRestantes <= 0,
+      proximaFechaIso: new Date(proximaTs).toISOString(),
+    }
+  },
+
+  getPlanesVencidos: () => {
+    const s = get()
+    return s.mantenimientoPlanes
+      .filter((p) => p.activo)
+      .map((p) => s.getEstadoPlan(p))
+      .filter((e) => e.vencido)
+  },
 
   maquinaNecesitaPrep: (maquinaId) => {
     const state = get()

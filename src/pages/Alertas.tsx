@@ -76,7 +76,8 @@ export default function Alertas() {
   )
 
   const totalIncidencias = incidencias.length
-  const total = averiasAbiertas.length + usosConProblemas.length
+  const planesVencidos = useWorkflowStore((s) => s.getPlanesVencidos)()
+  const total = averiasAbiertas.length + usosConProblemas.length + planesVencidos.length
 
   const getMaquina = (id: string) => maquinas.find((m) => m.id === id) ?? null
   const getReporter = (usuarioId: string | null) =>
@@ -197,7 +198,10 @@ export default function Alertas() {
           )}
         </section>
 
-        {/* 4. Usos cerrados con problemas — histórico */}
+        {/* 4. Revisiones programadas vencidas */}
+        <RevisionesVencidasSection />
+
+        {/* 5. Usos cerrados con problemas — histórico */}
         <section>
           <SectionHeader
             title="Usos cerrados con incidencia"
@@ -288,6 +292,68 @@ function EmptyState({ message }: { message: string }) {
     <div className="bg-surface-2 rounded-lg border border-border-subtle p-6 text-center">
       <p className="text-sm text-text-tertiary">{message}</p>
     </div>
+  )
+}
+
+/**
+ * Sección de Alertas que lista los planes de revisión vencidos.
+ * Se calcula en cliente: cada plan tiene un intervalo (días/semanas/meses/usos)
+ * y un punto de referencia (última ejecución). Si el plazo está cumplido,
+ * aparece aquí para que el admin lo gestione (programa la revisión, registra
+ * un mantenimiento que lo resetea, etc.).
+ */
+function RevisionesVencidasSection() {
+  const getPlanesVencidos = useWorkflowStore((s) => s.getPlanesVencidos)
+  const maquinas = useWorkflowStore((s) => s.maquinas)
+  const planes = useWorkflowStore((s) => s.mantenimientoPlanes)
+
+  // Recalculamos al cambiar planes o usos (el cálculo depende de ambos)
+  const vencidos = useMemo(() => getPlanesVencidos(), [getPlanesVencidos, planes])
+
+  if (vencidos.length === 0) return null  // si no hay vencidos, no mostramos la sección
+
+  return (
+    <section>
+      <SectionHeader
+        title="Revisiones vencidas"
+        subtitle="Planes de mantenimiento programado que han superado su plazo"
+        count={vencidos.length}
+      />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {vencidos.map((estado) => {
+          const maquina = maquinas.find((m) => m.id === estado.plan.maquina_id)
+          if (!maquina) return null
+          const sobrepaso = estado.usosRestantes !== null
+            ? `${Math.abs(estado.usosRestantes)} usos por encima del plazo`
+            : `${Math.abs(estado.diasRestantes ?? 0)} ${Math.abs(estado.diasRestantes ?? 0) === 1 ? 'día' : 'días'} por encima del plazo`
+          return (
+            <div
+              key={estado.plan.id}
+              className="bg-averia/5 border-2 border-averia/30 rounded-lg p-4"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs text-averia font-bold">{maquina.codigo}</span>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-averia bg-averia/15 px-2 py-0.5 rounded">
+                  Vencida
+                </span>
+              </div>
+              <h4 className="text-base font-bold text-text-primary mb-1">{maquina.nombre}</h4>
+              <p className="text-sm text-text-secondary mb-2">
+                <strong>{estado.plan.nombre}</strong> · cada {estado.plan.cada_n}{' '}
+                {estado.plan.unidad === 'usos' ? 'usos'
+                  : estado.plan.unidad === 'dias' ? 'días'
+                  : estado.plan.unidad === 'semanas' ? 'semanas'
+                  : 'meses'}
+              </p>
+              <p className="text-xs text-averia">⚠ {sobrepaso}</p>
+              {estado.plan.descripcion && (
+                <p className="text-[11px] text-text-tertiary mt-2 italic">{estado.plan.descripcion}</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 

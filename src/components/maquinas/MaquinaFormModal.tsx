@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
+import PlanesMantenimientoSection from './PlanesMantenimientoSection'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { TIPOS_MAQUINA, SUBTIPOS_FRESADORA } from '../../constants/estados'
 import type { Maquina, TipoMaquina, SubtipoFresadora } from '../../types/database'
@@ -213,6 +214,9 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
             className="input-field resize-none"
           />
         </Field>
+
+        {/* Planes de revisión — sólo en modo edición (cuando ya existe la máquina) */}
+        {initial && <PlanesMantenimientoSection maquina={initial} />}
 
         <div className="flex gap-2 pt-2">
           <button

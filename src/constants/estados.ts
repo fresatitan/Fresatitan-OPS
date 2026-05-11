@@ -73,6 +73,14 @@ export const TIPOS_PROCESO: Record<TipoProceso, { label: string; icon: string }>
   blender:         { label: 'Blender',         icon: '⬡' },
 }
 
+// Etiquetas de las unidades de planes de revisión
+export const UNIDADES_PLAN: Record<import('../types/database').PlanUnidad, { label: string; labelSingular: string }> = {
+  dias:    { label: 'días',    labelSingular: 'día' },
+  semanas: { label: 'semanas', labelSingular: 'semana' },
+  meses:   { label: 'meses',   labelSingular: 'mes' },
+  usos:    { label: 'usos',    labelSingular: 'uso' },
+}
+
 // Etiquetas de las sub-familias de fresadoras
 export const SUBTIPOS_FRESADORA: Record<SubtipoFresadora, { label: string; short: string; description: string }> = {
   metal:  { label: 'Metal',  short: 'METAL',  description: 'Fresado en metal (Fanuc)' },
