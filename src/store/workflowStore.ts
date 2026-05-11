@@ -560,7 +560,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ error: error.message })
       return null
     }
-    return (data as Mantenimiento).id
+
+    // Optimistic local update — agrega el mantenimiento al store
+    // inmediatamente (la UI lo refleja sin esperar Realtime).
+    const mant = data as Mantenimiento
+    set((s) => ({
+      mantenimientos: [mant, ...s.mantenimientos.filter((m) => m.id !== mant.id)],
+    }))
+    return mant.id
   },
 
   // ---------------------------------------------------------------------------
@@ -590,11 +597,23 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       return
     }
 
-    const { error } = await supabase.from('maquinas').insert(payload)
+    const { data: inserted, error } = await supabase
+      .from('maquinas')
+      .insert(payload)
+      .select()
+      .single()
     if (error) {
       console.error('[addMaquina] error:', error)
       set({ error: error.message })
+      return
     }
+    // Optimistic local update — añade la máquina inmediatamente al store
+    const nueva = inserted as Maquina
+    set((s) => ({
+      maquinas: [...s.maquinas.filter((m) => m.id !== nueva.id), nueva].sort((a, b) =>
+        a.codigo.localeCompare(b.codigo),
+      ),
+    }))
   },
 
   updateMaquina: async (id, data) => {
@@ -606,10 +625,17 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       }))
       return
     }
+    // Optimistic local update + rollback on error
+    const prevMaquinas = get().maquinas
+    set((s) => ({
+      maquinas: s.maquinas.map((m) =>
+        m.id === id ? { ...m, ...data, updated_at: new Date().toISOString() } : m,
+      ),
+    }))
     const { error } = await supabase.from('maquinas').update(data).eq('id', id)
     if (error) {
       console.error('[updateMaquina] error:', error)
-      set({ error: error.message })
+      set({ maquinas: prevMaquinas, error: error.message })
     }
   },
 
@@ -618,10 +644,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set((s) => ({ maquinas: s.maquinas.filter((m) => m.id !== id) }))
       return
     }
+    // Optimistic local update + rollback on error
+    const prevMaquinas = get().maquinas
+    set((s) => ({ maquinas: s.maquinas.filter((m) => m.id !== id) }))
     const { error } = await supabase.from('maquinas').delete().eq('id', id)
     if (error) {
       console.error('[removeMaquina] error:', error)
-      set({ error: error.message })
+      set({ maquinas: prevMaquinas, error: error.message })
     }
   },
 
@@ -632,16 +661,28 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       }))
       return
     }
+
+    // Optimistic local update — refleja el cambio inmediatamente en la UI
+    // sin esperar el round-trip de Realtime. Guardamos el estado previo
+    // por si necesitamos hacer rollback en caso de error.
+    const prevEstado = get().maquinas.find((m) => m.id === maquinaId)?.estado_actual
+    set((s) => ({
+      maquinas: s.maquinas.map((m) => (m.id === maquinaId ? { ...m, estado_actual: estado } : m)),
+    }))
+
     // Caso especial: marcar avería como resuelta → RPC (funciona también para anon)
     if (estado === 'parada') {
-      // Guardamos si la máquina estaba en avería antes de resolver, para decidir
-      // si disparamos el email "Avería resuelta" a los admins.
-      const current = get().maquinas.find((m) => m.id === maquinaId)
-      const wasAveria = current?.estado_actual === 'avería'
+      const wasAveria = prevEstado === 'avería'
 
       const { error } = await supabase.rpc('resolve_maquina_averia', { p_maquina_id: maquinaId })
       if (error) {
         console.error('[updateEstadoMaquina] resolve error:', error)
+        // Rollback del optimistic update
+        if (prevEstado) {
+          set((s) => ({
+            maquinas: s.maquinas.map((m) => (m.id === maquinaId ? { ...m, estado_actual: prevEstado } : m)),
+          }))
+        }
         set({ error: error.message })
         return
       }
@@ -667,6 +708,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       .eq('id', maquinaId)
     if (error) {
       console.error('[updateEstadoMaquina] error:', error)
+      // Rollback del optimistic update
+      if (prevEstado) {
+        set((s) => ({
+          maquinas: s.maquinas.map((m) => (m.id === maquinaId ? { ...m, estado_actual: prevEstado } : m)),
+        }))
+      }
       set({ error: error.message })
       return
     }
@@ -695,6 +742,41 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       }))
       return
     }
+
+    // Optimistic local update — refleja el reporte de avería inmediatamente:
+    //   1. Crítica → bloquea la máquina visualmente (estado_actual = 'avería')
+    //   2. Leve     → la máquina sigue operativa, pero se añade una entrada
+    //      provisional al historial para que el banner "AVERÍA PENDIENTE
+    //      DE REVISAR" aparezca de inmediato en el panel y dashboard.
+    // El listener de Realtime hará refetch completo del historial y de
+    // máquinas, sobreescribiendo estas entradas provisionales con la verdad
+    // de la BD (incluyendo IDs reales).
+    const prevEstado = get().maquinas.find((m) => m.id === maquinaId)?.estado_actual
+    const provisionalEstado: MaquinaEstado = {
+      id: newLocalId('me'),
+      maquina_id: maquinaId,
+      estado: 'avería',
+      motivo: motivo,
+      timestamp: new Date().toISOString(),
+      usuario_id: usuarioId ?? null,
+      severidad: severidadPropuesta,
+      severidad_confirmada_por_admin: false,
+      cerrada_en: null,
+      cerrada_por: null,
+      resolucion_descripcion: null,
+      tecnico_intervencion: null,
+      fecha_intervencion: null,
+    }
+
+    set((s) => ({
+      maquinas: severidadPropuesta === 'critica'
+        ? s.maquinas.map((m) =>
+            m.id === maquinaId ? { ...m, estado_actual: 'avería' as EstadoMaquina } : m
+          )
+        : s.maquinas,
+      estadosHistorial: [provisionalEstado, ...s.estadosHistorial],
+    }))
+
     // RPC SECURITY DEFINER: bloquea máquina + registra la entrada en historial
     // con la severidad propuesta por el trabajador (pendiente de confirmación
     // por admin). Ver supabase/migrations/0008_add_severidad_averia.sql
@@ -706,6 +788,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     })
     if (error) {
       console.error('[reportarAveria] error:', error)
+      // Rollback del optimistic update
+      set((s) => ({
+        maquinas: prevEstado
+          ? s.maquinas.map((m) => (m.id === maquinaId ? { ...m, estado_actual: prevEstado } : m))
+          : s.maquinas,
+        estadosHistorial: s.estadosHistorial.filter((e) => e.id !== provisionalEstado.id),
+      }))
       set({ error: error.message })
       return
     }
@@ -747,6 +836,28 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       })
       return
     }
+    // Optimistic local update — refleja la confirmación inmediatamente:
+    //   · severidad final 'leve'    → desbloquea la máquina si estaba en avería
+    //   · severidad final 'critica' → mantiene la máquina en avería
+    // El listener de Realtime sobrescribirá con la verdad de la BD.
+    const prevHistorial = get().estadosHistorial
+    const prevMaquinas = get().maquinas
+    const targetRow = prevHistorial.find((e) => e.id === maquinaEstadoId)
+    set((s) => ({
+      estadosHistorial: s.estadosHistorial.map((e) =>
+        e.id === maquinaEstadoId
+          ? { ...e, severidad: severidadFinal, severidad_confirmada_por_admin: true }
+          : e,
+      ),
+      maquinas: targetRow
+        ? s.maquinas.map((m) =>
+            m.id === targetRow.maquina_id && severidadFinal === 'leve' && m.estado_actual === 'avería'
+              ? { ...m, estado_actual: 'parada' as EstadoMaquina }
+              : m,
+          )
+        : s.maquinas,
+    }))
+
     const { error } = await supabase.rpc('confirmar_severidad_averia', {
       p_maquina_estado_id: maquinaEstadoId,
       p_severidad_final: severidadFinal,
@@ -754,7 +865,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     })
     if (error) {
       console.error('[confirmarSeveridadAveria] error:', error)
-      set({ error: error.message })
+      // Rollback del optimistic update
+      set({ estadosHistorial: prevHistorial, maquinas: prevMaquinas, error: error.message })
     }
   },
 
@@ -788,7 +900,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ error: error.message })
       return null
     }
-    return (data?.id as string | undefined) ?? null
+
+    // Optimistic local update — la UI refleja la preparación inmediatamente,
+    // sin esperar el round-trip de Realtime. El listener Realtime después
+    // hará un refetch que es idempotente y termina sincronizando.
+    const prep = data as Preparacion
+    set((s) => ({ preparaciones: [prep, ...s.preparaciones.filter((p) => p.id !== prep.id)] }))
+    return prep.id
   },
 
   resolverAveria: async ({
@@ -832,6 +950,37 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       return cerradaId
     }
 
+    // Optimistic local update — cierra la avería abierta y desbloquea la máquina
+    // de inmediato. El listener de Realtime sobrescribirá con la verdad de BD.
+    const prevHistorial = get().estadosHistorial
+    const prevMaquinas = get().maquinas
+    const abiertas = prevHistorial
+      .filter((e) => e.maquina_id === maquinaId && e.estado === 'avería' && !e.cerrada_en)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    const target = abiertas[0]
+    if (target) {
+      const nowIsoLocal = new Date().toISOString()
+      set((s) => ({
+        estadosHistorial: s.estadosHistorial.map((e) =>
+          e.id === target.id
+            ? {
+                ...e,
+                cerrada_en: nowIsoLocal,
+                cerrada_por: adminId ?? null,
+                resolucion_descripcion: resolucionDescripcion,
+                tecnico_intervencion: tecnicoIntervencion ?? null,
+                fecha_intervencion: fechaIntervencion ?? null,
+              }
+            : e,
+        ),
+        maquinas: s.maquinas.map((m) =>
+          m.id === maquinaId && m.estado_actual === 'avería'
+            ? { ...m, estado_actual: 'parada' as EstadoMaquina }
+            : m,
+        ),
+      }))
+    }
+
     const { data, error } = await supabase.rpc('resolve_maquina_averia', {
       p_maquina_id: maquinaId,
       p_usuario_id: toValidUuid(adminId),
@@ -841,7 +990,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     })
     if (error) {
       console.error('[resolverAveria] error:', error)
-      set({ error: error.message })
+      // Rollback del optimistic update
+      set({ estadosHistorial: prevHistorial, maquinas: prevMaquinas, error: error.message })
       return null
     }
     // La función RPC devuelve el id de maquina_estados cerrado (uuid)
