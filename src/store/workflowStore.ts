@@ -69,9 +69,20 @@ const SEED_MAQUINAS: Maquina[] = [
 // Helpers de fecha/hora
 // -----------------------------------------------------------------------------
 const todayDate = () => new Date().toISOString().slice(0, 10)
+/**
+ * Devuelve la hora local actual con precisión de segundos (HH:MM:SS).
+ * Importante: el cronómetro de un uso depende de la diferencia entre
+ * `hora_preparacion` y `Date.now()`, así que la hora_preparacion DEBE
+ * incluir los segundos del instante exacto en que se inició el proceso.
+ * Si redondeáramos al minuto, el cronómetro arrancaría mostrando un
+ * tiempo ya transcurrido (0–59 s) en lugar de 0.
+ */
 const nowTime = () => {
   const d = new Date()
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  const s = String(d.getSeconds()).padStart(2, '0')
+  return `${h}:${m}:${s}`
 }
 
 let localIdCounter = 1000
@@ -1023,7 +1034,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   registrarPreparacion: async ({ maquinaId, trabajadorId, observaciones }) => {
     const fecha = todayDate()
-    const hora = nowTime() + ':00'
+    // nowTime() ya devuelve HH:MM:SS (precisión al segundo) — antes era HH:MM
+    // y se concatenaba ':00', lo que provocaba que el cronómetro de la UI
+    // arrancara mostrando los segundos transcurridos desde el minuto actual.
+    const hora = nowTime()
     const payload = {
       maquina_id: maquinaId,
       trabajador_id: toValidUuid(trabajadorId),

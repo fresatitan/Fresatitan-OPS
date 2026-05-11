@@ -68,9 +68,12 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
   const finalizar = async (res: 'ok' | 'ko', incidencias: { tipo: string | null; descripcion: string }[] = []) => {
     if (!tecnicoCierre) return
     setSubmitting(true)
+    // Si el admin no ha tocado "Ajustar datos", dejamos que el store ponga
+    // la hora exacta al cerrar (HH:MM:SS, precisión al segundo). Si lo hizo,
+    // respetamos el valor manual del input HTML time (HH:MM).
     await cerrarUso({
       uso_id: uso.id,
-      hora_acabado: horaAcabado,
+      hora_acabado: showAjustes ? horaAcabado : undefined,
       tecnico_acabado_id: tecnicoCierre.id,
       resultado: res,
       incidencias,

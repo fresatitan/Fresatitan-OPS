@@ -105,10 +105,15 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
     if (maquina.requiere_lanzamiento && !tecnicoLanz) return
     if (!tipoProceso) return
     setSubmitting(true)
+    // Si el admin no ha tocado "Ajustar datos", omitimos fecha+hora para que
+    // el store registre el momento exacto en que se pulsa "Empezar ahora"
+    // (con precisión de segundos). De lo contrario, el cronómetro empezaría
+    // desfasado en 0-59 s respecto al instante real porque `hora` se capturó
+    // al abrir el modal con resolución de minutos.
     const id = await iniciarUso({
       maquina_id: maquina.id,
-      fecha,
-      hora_preparacion: hora,
+      fecha: showAjustes ? fecha : undefined,
+      hora_preparacion: showAjustes ? hora : undefined,
       tecnico_preparacion_id: tecnico.id,
       tecnico_lanzamiento_id: tecnicoLanz?.id ?? null,
       observaciones: observaciones.trim() || null,
