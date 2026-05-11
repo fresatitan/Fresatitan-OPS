@@ -63,7 +63,7 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
       >
         {/* Banner de aviso no bloqueante (pendiente revisión o leve confirmada) */}
         {pendingAveria && (
-          <div className="px-4 py-1.5 bg-parada text-white flex items-center gap-2 border-b border-parada/40">
+          <div className="px-4 py-1.5 bg-averia text-white flex items-center gap-2 border-b border-averia/40">
             <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />

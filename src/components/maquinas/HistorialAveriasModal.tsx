@@ -227,9 +227,9 @@ function AveriaHistorialCard({
           </span>
           {averia.severidad && (
             <span className={`text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded ${
-              severidadTone === 'averia' ? 'bg-averia/15 text-averia' : 'bg-parada/15 text-parada'
+              severidadTone === 'averia' ? 'bg-averia/15 text-averia' : 'bg-averia/10 text-averia'
             }`}>
-              {severidadTone === 'averia' ? '🔴' : '🟡'} {SEVERIDADES[averia.severidad].label}
+              {SEVERIDADES[averia.severidad].label}
             </span>
           )}
           {!averia.severidad_confirmada_por_admin && abierta && (

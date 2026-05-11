@@ -458,13 +458,13 @@ function PlantMaquinaCard({
         flex flex-col
         ${isAvailable && !warning ? 'bg-surface-2 border-border-subtle hover:border-primary hover:bg-surface-3 active:scale-[0.98]' : ''}
         ${isInUse    && !warning ? 'bg-activa/10 border-activa/40 hover:bg-activa/15 active:scale-[0.98]' : ''}
-        ${warning?.tone === 'pending' ? 'bg-parada/5 border-parada/40 hover:bg-parada/10 active:scale-[0.98]' : ''}
-        ${warning?.tone === 'leve'    ? 'bg-parada/5 border-parada/40 hover:bg-parada/10 active:scale-[0.98]' : ''}
+        ${warning?.tone === 'pending' ? 'bg-averia/5 border-averia/40 hover:bg-averia/10 active:scale-[0.98]' : ''}
+        ${warning?.tone === 'leve'    ? 'bg-averia/5 border-averia/40 hover:bg-averia/10 active:scale-[0.98]' : ''}
       `}
     >
       {/* Banner de advertencia no-bloqueante — cuando hay avería reportada */}
       {warning && (
-        <div className="-mx-5 -mt-5 mb-3 px-4 py-2 rounded-t-2xl bg-parada text-white flex items-center gap-2">
+        <div className="-mx-5 -mt-5 mb-3 px-4 py-2 rounded-t-2xl bg-averia text-white flex items-center gap-2">
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
@@ -501,7 +501,7 @@ function PlantMaquinaCard({
 
       {/* Motivo del reporte (si hay avería abierta) */}
       {openAveria?.motivo && (
-        <div className="mb-2 px-2.5 py-1.5 bg-surface-3/50 border-l-2 border-parada/60 rounded-r">
+        <div className="mb-2 px-2.5 py-1.5 bg-surface-3/50 border-l-2 border-averia/60 rounded-r">
           <p className="text-[11px] text-text-secondary leading-snug line-clamp-2">
             {openAveria.motivo}
           </p>
@@ -536,8 +536,8 @@ function PlantMaquinaCard({
 
       {/* Footer */}
       {isAvailable && !isInUse && (
-        <div className={`mt-4 pt-3 border-t ${warning ? 'border-parada/20' : 'border-border-subtle'}`}>
-          <span className={`text-base font-semibold ${warning ? 'text-parada' : 'text-activa'}`}>
+        <div className={`mt-4 pt-3 border-t ${warning ? 'border-averia/20' : 'border-border-subtle'}`}>
+          <span className={`text-base font-semibold ${warning ? 'text-averia' : 'text-activa'}`}>
             Toca para empezar →
           </span>
         </div>

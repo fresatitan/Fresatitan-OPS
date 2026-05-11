@@ -491,9 +491,11 @@ function SeveridadOption({
   /** Microcopy explicando qué pasa con la máquina si el admin confirma esta severidad */
   effect?: string
 }) {
+  // Ambas severidades se muestran en rojo (averia); la jerarquía visual la
+  // marca la intensidad del fondo/borde y el texto (CRÍTICA / LEVE).
   const palette = tone === 'critica'
-    ? { border: 'border-averia', bg: 'bg-averia/10', text: 'text-averia', icon: '🔴' }
-    : { border: 'border-parada', bg: 'bg-parada/10', text: 'text-parada', icon: '🟡' }
+    ? { border: 'border-averia',    bg: 'bg-averia/15', text: 'text-averia' }
+    : { border: 'border-averia/60', bg: 'bg-averia/5',  text: 'text-averia' }
 
   return (
     <button
@@ -508,7 +510,6 @@ function SeveridadOption({
       `}
     >
       <div className="flex items-center gap-2">
-        <span className="text-lg">{palette.icon}</span>
         <span className={`text-base font-bold ${active ? palette.text : 'text-text-primary'}`}>{title}</span>
       </div>
       <span className="text-xs text-text-tertiary leading-snug">{description}</span>

@@ -321,12 +321,14 @@ function AveriaCard({
     minute: '2-digit',
   })
 
-  // Paleta por variante
+  // Paleta por variante — todas las averías van en rojo (averia); jerarquía
+  // por intensidad: pendiente con animación, crítica con borde marcado, leve
+  // con borde más sutil pero el mismo color rojo.
   const style = variant === 'pendiente'
     ? { border: 'border-averia/40', bg: 'bg-averia/5', accent: 'bg-averia', text: 'text-averia', animate: 'animate-averia' }
     : variant === 'critica'
-    ? { border: 'border-averia/30', bg: 'bg-averia/5', accent: 'bg-averia', text: 'text-averia', animate: '' }
-    : { border: 'border-parada/30', bg: 'bg-parada/5', accent: 'bg-parada', text: 'text-parada', animate: '' }
+    ? { border: 'border-averia/40', bg: 'bg-averia/10', accent: 'bg-averia', text: 'text-averia', animate: '' }
+    : { border: 'border-averia/25', bg: 'bg-averia/5', accent: 'bg-averia', text: 'text-averia', animate: '' }
 
   const propuestaLabel = evento.severidad ? SEVERIDADES[evento.severidad].label : null
 
@@ -391,7 +393,7 @@ function AveriaCard({
       {variant === 'pendiente' && propuestaLabel && (
         <div className="mb-3 flex items-center gap-2 text-[11px] text-text-secondary">
           <span className="text-text-tertiary uppercase tracking-wider">Propuesta del trabajador:</span>
-          <span className={`font-semibold ${evento.severidad === 'critica' ? 'text-averia' : 'text-parada'}`}>
+          <span className="font-semibold text-averia">
             {propuestaLabel}
           </span>
         </div>
@@ -425,7 +427,7 @@ function AveriaCard({
             <div className="rounded border border-border-subtle bg-surface-3/40 px-3 py-2 text-[11px] text-text-secondary leading-snug mb-1">
               Decide el efecto sobre la máquina:{' '}
               <strong className="text-averia">crítica</strong> la bloquea ·{' '}
-              <strong className="text-parada">leve</strong> la deja operativa.
+              <strong className="text-averia">leve</strong> la deja operativa.
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -437,7 +439,7 @@ function AveriaCard({
               </button>
               <button
                 onClick={() => handleConfirmar('leve')}
-                className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded text-xs font-semibold bg-parada/15 border border-parada/40 text-parada hover:bg-parada/25 transition-colors"
+                className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded text-xs font-semibold bg-averia/10 border border-averia/30 text-averia hover:bg-averia/20 transition-colors"
               >
                 <span>Confirmar leve</span>
                 <span className="text-[9px] font-normal opacity-80">Máquina sigue operativa</span>
@@ -448,7 +450,7 @@ function AveriaCard({
         {variant === 'critica' && (
           <button
             onClick={() => handleConfirmar('leve')}
-            className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded text-xs font-semibold bg-parada/15 border border-parada/40 text-parada hover:bg-parada/25 transition-colors"
+            className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded text-xs font-semibold bg-averia/10 border border-averia/30 text-averia hover:bg-averia/20 transition-colors"
           >
             <span>Reclasificar como leve</span>
             <span className="text-[9px] font-normal opacity-80">Desbloquea la máquina</span>
@@ -491,8 +493,8 @@ function VariantBadge({ variant, severidad }: { variant: AveriaVariant; severida
     )
   }
   return (
-    <span className="text-[10px] font-mono uppercase tracking-widest text-parada bg-parada/15 px-2 py-0.5 rounded">
-      🟡 Leve {severidad ? '' : ''}
+    <span className="text-[10px] font-mono uppercase tracking-widest text-averia bg-averia/10 px-2 py-0.5 rounded">
+      Leve {severidad ? '' : ''}
     </span>
   )
 }
