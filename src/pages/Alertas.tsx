@@ -4,6 +4,7 @@ import TopBar from '../components/ui/TopBar'
 import TrabajadorAvatar from '../components/ui/TrabajadorAvatar'
 import ResolverAveriaModal from '../components/maquinas/ResolverAveriaModal'
 import SubirDocumentoModal from '../components/maquinas/SubirDocumentoModal'
+import AveriaTimeline from '../components/maquinas/AveriaTimeline'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useTrabajadoresStore } from '../store/trabajadoresStore'
 import { useAuthStore } from '../store/authStore'
@@ -418,6 +419,9 @@ function AveriaCard({
           <span>Subir parte técnico</span>
         </button>
       </div>
+
+      {/* Timeline cronológico de pasos seguidos para resolver la avería */}
+      <AveriaTimeline maquinaEstadoId={evento.id} averiaCerrada={false} />
 
       {/* Acciones */}
       <div className="mt-3 grid gap-2">

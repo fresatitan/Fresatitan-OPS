@@ -97,6 +97,18 @@ export interface AveriaDocumento {
   subido_en: string
 }
 
+/**
+ * Paso del timeline de seguimiento de una avería.
+ * Inmutable — si hay error se añade otro paso que lo corrija.
+ */
+export interface AveriaPaso {
+  id: string
+  maquina_estado_id: string
+  autor_id: string | null
+  contenido: string
+  created_at: string
+}
+
 // Un "uso de equipo" = una tanda preparación → acabado sobre una máquina
 export interface UsoEquipo {
   id: string

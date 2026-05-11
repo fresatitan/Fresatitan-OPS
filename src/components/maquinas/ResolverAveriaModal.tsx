@@ -137,8 +137,10 @@ export default function ResolverAveriaModal({ open, onClose, maquina }: Props) {
     <Modal open={open} onClose={handleClose} title={`Resolver avería · ${maquina.codigo}`} size="lg">
       <div className="space-y-5">
         <div className="bg-averia/5 border border-averia/20 rounded-lg p-3 text-[11px] text-text-secondary leading-relaxed">
-          Completa los datos de la resolución. Este registro queda en el historial
-          de la máquina para cumplir con los requisitos de trazabilidad sanitaria.
+          Completa los datos de la resolución. <strong>Sólo es obligatoria la
+          descripción</strong> — los documentos del técnico se pueden adjuntar
+          ahora o más tarde desde el historial, y son opcionales (a veces el
+          arreglo se hace internamente y no hay parte técnico que aportar).
         </div>
 
         <Field label="¿Qué se ha hecho?" required>
@@ -174,7 +176,7 @@ export default function ResolverAveriaModal({ open, onClose, maquina }: Props) {
         {/* Drop zone de archivos */}
         <div>
           <label className="block text-[11px] text-text-tertiary uppercase tracking-wider mb-2">
-            Documentos adjuntos
+            Documentos adjuntos <span className="text-text-tertiary/70 normal-case tracking-normal">(opcional)</span>
           </label>
           <div
             onDrop={handleDrop}

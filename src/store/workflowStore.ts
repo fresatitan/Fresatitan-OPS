@@ -14,6 +14,7 @@ import type {
   TipoMaquina,
   SeveridadAveria,
   AveriaDocumento,
+  AveriaPaso,
   Preparacion,
   TipoProceso,
 } from '../types/database'
@@ -122,6 +123,7 @@ interface WorkflowState {
   mantenimientos: Mantenimiento[]
   estadosHistorial: MaquinaEstado[]
   averiaDocumentos: AveriaDocumento[]
+  averiaPasos: AveriaPaso[]
   preparaciones: Preparacion[]
 
   loading: boolean
@@ -173,6 +175,10 @@ interface WorkflowState {
   getAveriasByMaquina: (maquinaId: string) => MaquinaEstado[]
   /** Documentos adjuntos a una fila concreta de avería */
   getDocumentosByAveria: (maquinaEstadoId: string) => AveriaDocumento[]
+  /** Pasos del timeline de una avería, ordenados asc por fecha (los más antiguos primero) */
+  getPasosByAveria: (maquinaEstadoId: string) => AveriaPaso[]
+  /** Añade un paso al timeline de una avería (solo admins) */
+  agregarPasoAveria: (maquinaEstadoId: string, contenido: string, autorId?: string | null) => Promise<string | null>
   /** Fuerza recarga de averia_documentos desde Supabase (tras subir uno nuevo) */
   refetchAveriaDocumentos: () => Promise<void>
   /** Última preparación registrada de una máquina (la más reciente, si hay) */
@@ -195,6 +201,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   mantenimientos: [],
   estadosHistorial: [],
   averiaDocumentos: [],
+  averiaPasos: [],
   preparaciones: [],
 
   loading: false,
@@ -217,6 +224,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         mantenimientos: [],
         estadosHistorial: [],
         averiaDocumentos: [],
+        averiaPasos: [],
         preparaciones: [],
         loading: false,
         initialized: true,
@@ -225,13 +233,15 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
 
     try {
-      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes, docsRes, prepsRes] = await Promise.all([
+      const [maquinasRes, usosRes, incidenciasRes, mantRes, estadosRes, docsRes, pasosRes, prepsRes] = await Promise.all([
         supabase.from('maquinas').select('*').order('codigo'),
         supabase.from('usos_equipo').select('*').order('created_at', { ascending: false }),
         supabase.from('incidencias').select('*').order('created_at', { ascending: false }),
         supabase.from('mantenimientos').select('*').order('fecha', { ascending: false }),
         supabase.from('maquina_estados').select('*').order('timestamp', { ascending: false }).limit(500),
         supabase.from('averia_documentos').select('*').order('subido_en', { ascending: false }),
+        // averia_pasos puede no existir todavía en BBDD antiguas; toleramos el fallo
+        supabase.from('averia_pasos').select('*').order('created_at', { ascending: true }).limit(2000),
         supabase.from('preparaciones').select('*').order('fecha', { ascending: false }).order('hora', { ascending: false }).limit(500),
       ])
 
@@ -242,6 +252,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       if (estadosRes.error) throw estadosRes.error
       if (docsRes.error) throw docsRes.error
       if (prepsRes.error) throw prepsRes.error
+      // pasosRes.error se ignora — si la tabla no existe en este entorno, no rompemos la carga
 
       set({
         maquinas: (maquinasRes.data ?? []) as Maquina[],
@@ -250,6 +261,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         mantenimientos: (mantRes.data ?? []) as Mantenimiento[],
         estadosHistorial: (estadosRes.data ?? []) as MaquinaEstado[],
         averiaDocumentos: (docsRes.data ?? []) as AveriaDocumento[],
+        averiaPasos: pasosRes.error ? [] : ((pasosRes.data ?? []) as AveriaPaso[]),
         preparaciones: (prepsRes.data ?? []) as Preparacion[],
         loading: false,
         initialized: true,
@@ -331,6 +343,16 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           .order('subido_en', { ascending: false })
           .then(({ data }) => {
             if (data) set({ averiaDocumentos: data as AveriaDocumento[] })
+          })
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'averia_pasos' }, () => {
+        supabase!
+          .from('averia_pasos')
+          .select('*')
+          .order('created_at', { ascending: true })
+          .limit(2000)
+          .then(({ data, error }) => {
+            if (!error && data) set({ averiaPasos: data as AveriaPaso[] })
           })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'preparaciones' }, () => {
@@ -1032,6 +1054,65 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   getDocumentosByAveria: (maquinaEstadoId) =>
     get().averiaDocumentos.filter((d) => d.maquina_estado_id === maquinaEstadoId),
+
+  getPasosByAveria: (maquinaEstadoId) =>
+    get().averiaPasos
+      .filter((p) => p.maquina_estado_id === maquinaEstadoId)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+
+  agregarPasoAveria: async (maquinaEstadoId, contenido, autorId) => {
+    const limpio = contenido.trim()
+    if (limpio.length === 0) return null
+
+    if (!isSupabaseConfigured || !supabase) {
+      const paso: AveriaPaso = {
+        id: newLocalId('ap'),
+        maquina_estado_id: maquinaEstadoId,
+        autor_id: autorId ?? null,
+        contenido: limpio,
+        created_at: new Date().toISOString(),
+      }
+      set((s) => ({ averiaPasos: [...s.averiaPasos, paso] }))
+      return paso.id
+    }
+
+    // Optimistic update — añadimos el paso provisional al instante
+    const provisional: AveriaPaso = {
+      id: newLocalId('ap'),
+      maquina_estado_id: maquinaEstadoId,
+      autor_id: autorId ?? null,
+      contenido: limpio,
+      created_at: new Date().toISOString(),
+    }
+    set((s) => ({ averiaPasos: [...s.averiaPasos, provisional] }))
+
+    const { data, error } = await supabase.rpc('agregar_paso_averia', {
+      p_maquina_estado_id: maquinaEstadoId,
+      p_contenido: limpio,
+      p_autor_id: toValidUuid(autorId ?? null),
+    })
+
+    if (error) {
+      console.error('[agregarPasoAveria] error:', error)
+      // Rollback: quitamos el provisional
+      set((s) => ({
+        averiaPasos: s.averiaPasos.filter((p) => p.id !== provisional.id),
+        error: error.message,
+      }))
+      return null
+    }
+
+    // Sustituimos el id provisional por el id real cuando lo conocemos
+    const realId = (data as string | null) ?? null
+    if (realId) {
+      set((s) => ({
+        averiaPasos: s.averiaPasos.map((p) =>
+          p.id === provisional.id ? { ...p, id: realId } : p,
+        ),
+      }))
+    }
+    return realId
+  },
 
   getUltimaPreparacion: (maquinaId) =>
     get().preparaciones.find((p) => p.maquina_id === maquinaId) ?? null,

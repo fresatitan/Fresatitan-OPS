@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import Modal from '../ui/Modal'
 import SubirDocumentoModal from './SubirDocumentoModal'
+import AveriaTimeline from './AveriaTimeline'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore } from '../../store/trabajadoresStore'
 import { getSignedUrl } from '../../lib/averiaDocumentos'
@@ -315,6 +316,9 @@ function AveriaHistorialCard({
           <span>{documentos.length === 0 ? 'Subir parte técnico / documento' : 'Añadir otro'}</span>
         </button>
       </div>
+
+      {/* Timeline cronológico — visible siempre; sólo lectura si la avería ya está cerrada */}
+      <AveriaTimeline maquinaEstadoId={averia.id} averiaCerrada={!abierta} />
     </div>
   )
 }
