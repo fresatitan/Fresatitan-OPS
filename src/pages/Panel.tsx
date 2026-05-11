@@ -5,6 +5,7 @@ import { useElapsedTime } from '../hooks/useElapsedTime'
 import { toIsoDateTime } from '../lib/utils'
 import NuevoUsoModal from '../components/maquinas/NuevoUsoModal'
 import CerrarUsoModal from '../components/maquinas/CerrarUsoModal'
+import HistorialMantenimientosModal from '../components/maquinas/HistorialMantenimientosModal'
 import SeleccionTipoTrabajoModal from '../components/panel/SeleccionTipoTrabajoModal'
 import StartMantenimientoModal from '../components/panel/StartMantenimientoModal'
 import StartPreparacionModal from '../components/panel/StartPreparacionModal'
@@ -42,6 +43,8 @@ export default function Panel() {
   const [cerrarFor, setCerrarFor] = useState<{ maquina: Maquina; uso: UsoEquipo } | null>(null)
   // When user picks "Reportar avería" from the selector, open NuevoUsoModal in avería mode
   const [averiaFor, setAveriaFor] = useState<Maquina | null>(null)
+  // Historial de mantenimientos (solo lectura) abierto desde el selector
+  const [historialFor, setHistorialFor] = useState<Maquina | null>(null)
 
   // Solo máquinas operativas (Lilian queda fuera del panel)
   const visibles = useMemo(() => maquinas.filter((m) => m.activa), [maquinas])
@@ -86,6 +89,12 @@ export default function Panel() {
     const m = selectorFor
     setSelectorFor(null)
     if (m) setAveriaFor(m)
+  }
+
+  const handleVerHistorialMant = () => {
+    const m = selectorFor
+    setSelectorFor(null)
+    if (m) setHistorialFor(m)
   }
 
   return (
@@ -135,6 +144,14 @@ export default function Panel() {
           onSelectMantenimiento={handleSelectMantenimiento}
           onSelectPreparacion={handleSelectPreparacion}
           onSelectAveria={handleSelectAveria}
+          onVerHistorialMantenimientos={handleVerHistorialMant}
+        />
+      )}
+      {historialFor && (
+        <HistorialMantenimientosModal
+          open={!!historialFor}
+          onClose={() => setHistorialFor(null)}
+          maquina={historialFor}
         />
       )}
       {nuevoFor && (

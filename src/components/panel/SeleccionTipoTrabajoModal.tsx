@@ -11,6 +11,8 @@ interface Props {
   onSelectMantenimiento: () => void
   onSelectPreparacion: () => void
   onSelectAveria: () => void
+  /** Abre el historial de mantenimientos de la máquina (modo solo-lectura) */
+  onVerHistorialMantenimientos: () => void
 }
 
 /**
@@ -32,6 +34,7 @@ export default function SeleccionTipoTrabajoModal({
   onSelectMantenimiento,
   onSelectPreparacion,
   onSelectAveria,
+  onVerHistorialMantenimientos,
 }: Props) {
   // La máquina solo ofrece opción de Preparación si está marcada como
   // requiere_preparacion en su ficha (se configura desde Máquinas → Editar).
@@ -139,15 +142,24 @@ export default function SeleccionTipoTrabajoModal({
           </button>
         </div>
 
-        {/* Report breakdown link */}
-        <div className="mt-6 pt-4 border-t border-border-subtle flex items-center justify-between">
-          <button
-            onClick={onSelectAveria}
-            className="text-[11px] text-averia hover:text-averia/80 transition-colors flex items-center gap-1"
-          >
-            <span>⚠</span>
-            <span className="underline decoration-dotted">Reportar avería en esta máquina</span>
-          </button>
+        {/* Acciones secundarias: historial de mantenimientos + reportar avería */}
+        <div className="mt-6 pt-4 border-t border-border-subtle flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-4 flex-wrap">
+            <button
+              onClick={onVerHistorialMantenimientos}
+              className="text-[11px] text-mantenimiento hover:text-mantenimiento/80 transition-colors flex items-center gap-1"
+            >
+              <span>📋</span>
+              <span className="underline decoration-dotted">Ver historial de mantenimientos</span>
+            </button>
+            <button
+              onClick={onSelectAveria}
+              className="text-[11px] text-averia hover:text-averia/80 transition-colors flex items-center gap-1"
+            >
+              <span>⚠</span>
+              <span className="underline decoration-dotted">Reportar avería en esta máquina</span>
+            </button>
+          </div>
           <button
             onClick={onClose}
             className="text-sm text-text-tertiary hover:text-text-secondary transition-colors"
