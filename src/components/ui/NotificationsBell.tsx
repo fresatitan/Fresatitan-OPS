@@ -174,7 +174,7 @@ function NotificationItem({
   onClick: () => void
 }) {
   const tiempoRel = useMemo(() => relativeTime(notif.timestamp), [notif.timestamp])
-  const accentClass = severidadAccent(notif.severidad)
+  const accentClass = tipoAccent(notif.tipo)
 
   return (
     <li
@@ -196,7 +196,7 @@ function NotificationItem({
         }
       `}
     >
-      {/* Acento lateral izquierdo según severidad */}
+      {/* Acento lateral izquierdo, color único por tipo de notificación */}
       <span className={`absolute left-0 top-0 bottom-0 w-1 ${accentClass.bar}`} />
 
       <div className="pl-2 flex items-start gap-3">
@@ -226,36 +226,57 @@ function NotificationItem({
 // Helpers
 // =============================================================================
 
-function severidadAccent(sev: Notificacion['severidad']) {
-  switch (sev) {
-    case 'critica':
+/**
+ * Color único por tipo de notificación. Cada categoría tiene su paleta para
+ * que el admin las distinga de un vistazo en el dropdown.
+ *
+ *   · Averías (pendiente / crítica) → ROJO (averia)
+ *   · Averías leves                       → ROSA (averia con baja opacidad)
+ *   · Revisiones de mantenimiento vencidas → NARANJA (parada)
+ *   · Usos cerrados con incidencia (KO)    → DORADO (primary, color de marca)
+ *   · Mantenimientos abiertos              → AZUL (mantenimiento)
+ *
+ * Esto independiza el color del item del campo `severidad` (que se usa solo
+ * para el color del badge contador global).
+ */
+function tipoAccent(tipo: Notificacion['tipo']) {
+  switch (tipo) {
+    case 'averia_pendiente':
+    case 'averia_critica':
       return {
         bar: 'bg-averia',
-        bg: 'bg-averia/10',
+        bg: 'bg-averia/15',
         text: 'text-averia',
         dot: 'bg-averia',
       }
-    case 'alta':
+    case 'averia_leve':
+      return {
+        bar: 'bg-averia/60',
+        bg: 'bg-averia/8',
+        text: 'text-averia',
+        dot: 'bg-averia/70',
+      }
+    case 'revision_vencida':
       return {
         bar: 'bg-parada',
-        bg: 'bg-parada/10',
+        bg: 'bg-parada/15',
         text: 'text-parada',
         dot: 'bg-parada',
       }
-    case 'media':
+    case 'uso_ko':
       return {
-        bar: 'bg-mantenimiento',
-        bg: 'bg-mantenimiento/10',
-        text: 'text-mantenimiento',
-        dot: 'bg-mantenimiento',
+        bar: 'bg-primary',
+        bg: 'bg-primary-muted',
+        text: 'text-primary',
+        dot: 'bg-primary',
       }
-    case 'info':
+    case 'mantenimiento_abierto':
     default:
       return {
-        bar: 'bg-text-tertiary',
-        bg: 'bg-surface-4',
-        text: 'text-text-secondary',
-        dot: 'bg-text-tertiary',
+        bar: 'bg-mantenimiento',
+        bg: 'bg-mantenimiento/15',
+        text: 'text-mantenimiento',
+        dot: 'bg-mantenimiento',
       }
   }
 }
