@@ -10,7 +10,61 @@
     <title>FRESATITAN OPS</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Fallback visible si el bundle JS no llega a ejecutarse (WebView muy antiguo,
+         error de parseo, red caída en primer arranque). React lo sustituirá por su
+         árbol cuando montar el root. Si el operario sigue viéndolo pasados 8 s,
+         significa que la tablet no es compatible. -->
+    <div id="root">
+      <div id="boot-fallback" style="
+        position: fixed; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; padding: 24px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0A0A0A; color: #F0F0F0; text-align: center;
+      ">
+        <div style="
+          width: 64px; height: 64px; border-radius: 12px;
+          background: #D09A40; color: #0A0A0A; font-weight: 800; font-size: 28px;
+          display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+        ">F</div>
+        <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">FRESATITAN OPS</div>
+        <div id="boot-status" style="font-size: 13px; color: #888;">Cargando…</div>
+        <div id="boot-error" style="
+          display: none; max-width: 320px; margin-top: 18px; padding: 14px;
+          background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 8px; font-size: 12px; color: #FCA5A5; line-height: 1.5;
+        ">
+          <div style="font-weight: 700; margin-bottom: 6px;">⚠ Tablet no compatible</div>
+          El navegador interno de esta tablet es demasiado antiguo para abrir la app.
+          Pide al admin probar en una tablet más reciente (Android 8 o superior) o
+          usar el dashboard web desde el ordenador.
+        </div>
+      </div>
+    </div>
+    <script>
+      // Si pasados 8 s seguimos viendo el fallback, lo más probable es que el
+      // bundle ES haya fallado al parsear en una WebView muy antigua.
+      window.setTimeout(function () {
+        var f = document.getElementById('boot-fallback')
+        if (f && document.body.contains(f)) {
+          var s = document.getElementById('boot-status')
+          var e = document.getElementById('boot-error')
+          if (s) s.style.display = 'none'
+          if (e) e.style.display = 'block'
+        }
+      }, 8000)
+      // Captura errores globales y los muestra junto al fallback (útil para depurar
+      // en tablets sin acceso a remote debugging).
+      window.addEventListener('error', function (ev) {
+        var e = document.getElementById('boot-error')
+        if (e) {
+          e.style.display = 'block'
+          var detail = document.createElement('div')
+          detail.style.cssText = 'margin-top: 8px; font-size: 10px; opacity: 0.7; word-break: break-all;'
+          detail.textContent = (ev.message || 'error') + ' @ ' + (ev.filename || '?') + ':' + (ev.lineno || '?')
+          e.appendChild(detail)
+        }
+      })
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
