@@ -273,7 +273,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
                       {a.einas !== undefined && (
                         <span className="block text-[10px] font-normal opacity-80 mt-0.5">
                           {isSel && einasMarcadas.length > 0
-                            ? `Eines: ${einasMarcadas.sort((a, b) => a - b).join(', ')}`
+                            ? `Herramientas: ${einasMarcadas.sort((a, b) => a - b).join(', ')}`
                             : `Elegir 1..${a.einas}`}
                         </span>
                       )}
@@ -282,11 +282,11 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
                 })}
               </div>
 
-              {/* Sub-panel: números de eina (1..N) si Canvi eina está activo */}
+              {/* Sub-panel: números de herramienta (1..N) si Cambio de herramienta está activo */}
               {tieneCanviEina && (
                 <div className="rounded-lg border border-mantenimiento/30 bg-mantenimiento/5 p-3">
                   <div className="text-[11px] uppercase tracking-wider text-mantenimiento font-semibold mb-2">
-                    ¿Qué eina(s) has cambiado?
+                    ¿Qué herramienta(s) has cambiado?
                   </div>
                   <div className="grid grid-cols-7 sm:grid-cols-9 gap-1.5">
                     {Array.from({ length: einasMax }, (_, i) => i + 1).map((n) => {

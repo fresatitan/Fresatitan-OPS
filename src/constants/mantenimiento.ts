@@ -25,13 +25,17 @@ export type AccionDef = {
 
 // -----------------------------------------------------------------------------
 // FRESADORAS METAL
+//
+// Los ids se mantienen estables (independientes del idioma de la UI) para que
+// la auto-vinculación a planes y los registros históricos no se rompan si en
+// el futuro se cambian las etiquetas. La UI siempre va en castellano.
 // -----------------------------------------------------------------------------
 export const ACCIONES_FRESADORA_METAL: AccionDef[] = [
-  { id: 'calibrat',        label: 'Calibrat' },
-  { id: 'reposicio_oli',   label: 'Reposició oli' },
-  { id: 'diposit',         label: 'Dipòsit (aigua + additiu)' },
-  { id: 'viruta',          label: 'Contenidor de viruta' },
-  { id: 'canvi_eina',      label: 'Canvi eina', einas: 21 },
+  { id: 'calibrat',        label: 'Calibrado' },
+  { id: 'reposicio_oli',   label: 'Reposición de aceite' },
+  { id: 'diposit',         label: 'Depósito (agua + aditivo)' },
+  { id: 'viruta',          label: 'Contenedor de viruta' },
+  { id: 'canvi_eina',      label: 'Cambio de herramienta', einas: 21 },
   { id: 'otros',           label: 'Otros', esOtros: true },
 ]
 
@@ -39,10 +43,10 @@ export const ACCIONES_FRESADORA_METAL: AccionDef[] = [
 // FRESADORAS SECO
 // -----------------------------------------------------------------------------
 export const ACCIONES_FRESADORA_SECO: AccionDef[] = [
-  { id: 'calibrat_eixos',  label: 'Calibrat eixos' },
+  { id: 'calibrat_eixos',  label: 'Calibrado de ejes' },
   { id: 'spindle',         label: 'Spindle' },
-  { id: 'neteja_interior', label: 'Neteja interior' },
-  { id: 'canvi_eina',      label: 'Canvi eina', einas: 6 },
+  { id: 'neteja_interior', label: 'Limpieza interior' },
+  { id: 'canvi_eina',      label: 'Cambio de herramienta', einas: 6 },
   { id: 'otros',           label: 'Otros', esOtros: true },
 ]
 
@@ -50,13 +54,13 @@ export const ACCIONES_FRESADORA_SECO: AccionDef[] = [
 // FRESADORAS HÚMEDO
 // -----------------------------------------------------------------------------
 export const ACCIONES_FRESADORA_HUMEDO: AccionDef[] = [
-  { id: 'calibrat',        label: 'Calibrat' },
+  { id: 'calibrat',        label: 'Calibrado' },
   { id: 'spindle',         label: 'Spindle' },
-  { id: 'diposit',         label: 'Dipòsit (aigua + additiu)' },
-  { id: 'filtres',         label: 'Filtres' },
-  { id: 'canal_chorro',    label: 'Canal chorro' },
-  { id: 'neteja_interior', label: 'Neteja interior' },
-  { id: 'canvi_eina',      label: 'Canvi eina', einas: 12 },
+  { id: 'diposit',         label: 'Depósito (agua + aditivo)' },
+  { id: 'filtres',         label: 'Filtros' },
+  { id: 'canal_chorro',    label: 'Canal de chorro' },
+  { id: 'neteja_interior', label: 'Limpieza interior' },
+  { id: 'canvi_eina',      label: 'Cambio de herramienta', einas: 12 },
   { id: 'otros',           label: 'Otros', esOtros: true },
 ]
 
@@ -65,11 +69,11 @@ export const ACCIONES_FRESADORA_HUMEDO: AccionDef[] = [
 // -----------------------------------------------------------------------------
 export const ACCIONES_SINTERIZADORA: AccionDef[] = [
   { id: 'cutter',           label: 'Cutter' },
-  { id: 'filtre',           label: 'Filtre' },
-  { id: 'filtre_posterior', label: 'Filtre posterior' },
+  { id: 'filtre',           label: 'Filtro' },
+  { id: 'filtre_posterior', label: 'Filtro posterior' },
   { id: 'piab',             label: 'PIAB' },
-  { id: 'sensor_oxigen',    label: "Sensor d'oxigen" },
-  { id: 'calibrat',         label: 'Calibrat' },
+  { id: 'sensor_oxigen',    label: 'Sensor de oxígeno' },
+  { id: 'calibrat',         label: 'Calibrado' },
   { id: 'otros',            label: 'Otros', esOtros: true },
 ]
 
@@ -77,9 +81,9 @@ export const ACCIONES_SINTERIZADORA: AccionDef[] = [
 // IMPRESORAS 3D
 // -----------------------------------------------------------------------------
 export const ACCIONES_IMPRESORA_3D: AccionDef[] = [
-  { id: 'calibrat',          label: 'Calibrat' },
-  { id: 'canvi_base_safata', label: 'Canvi base safata' },
-  { id: 'neteja',            label: 'Neteja' },
+  { id: 'calibrat',          label: 'Calibrado' },
+  { id: 'canvi_base_safata', label: 'Cambio de base de bandeja' },
+  { id: 'neteja',            label: 'Limpieza' },
   { id: 'otros',             label: 'Otros', esOtros: true },
 ]
 
@@ -134,29 +138,29 @@ export type PlantillaPlan = {
 export const PLANTILLAS_PLAN: PlantillaPlan[] = [
   // -- Fresadoras METAL --------------------------------------------------------
   { id: 't-metal-calibrat',     aplicaA: [{ tipo: 'fresadora', subtipo: 'metal' }],
-    nombre: 'Calibrat', descripcion: 'Calibración periódica de ejes y verificación de precisión.',
+    nombre: 'Calibrado', descripcion: 'Calibración periódica de ejes y verificación de precisión.',
     unidad: 'meses', cada_n: 6, accionId: 'calibrat',
     fuente: 'Fabricantes CNC dental (cada 6 meses recomendado).' },
   { id: 't-metal-oli',          aplicaA: [{ tipo: 'fresadora', subtipo: 'metal' }],
-    nombre: 'Reposició oli', descripcion: 'Comprobar y rellenar nivel de aceite del cabezal/CNC.',
+    nombre: 'Reposición de aceite', descripcion: 'Comprobar y rellenar nivel de aceite del cabezal/CNC.',
     unidad: 'meses', cada_n: 3, accionId: 'reposicio_oli',
     fuente: 'Mantenimiento preventivo CNC industrial (250h o 3 meses).' },
   { id: 't-metal-diposit',      aplicaA: [{ tipo: 'fresadora', subtipo: 'metal' }],
-    nombre: 'Dipòsit (aigua + additiu)', descripcion: 'Renovar mezcla refrigerante del depósito.',
+    nombre: 'Depósito (agua + aditivo)', descripcion: 'Renovar mezcla refrigerante del depósito.',
     unidad: 'meses', cada_n: 3, accionId: 'diposit',
     fuente: 'Vida media de refrigerantes sintéticos: 2-4 meses.' },
   { id: 't-metal-viruta',       aplicaA: [{ tipo: 'fresadora', subtipo: 'metal' }],
-    nombre: 'Contenidor de viruta', descripcion: 'Vaciar y limpiar el contenedor de virutas.',
+    nombre: 'Contenedor de viruta', descripcion: 'Vaciar y limpiar el contenedor de virutas.',
     unidad: 'semanas', cada_n: 1, accionId: 'viruta',
     fuente: 'Recomendación uso diario/semanal según volumen.' },
   { id: 't-metal-eina',         aplicaA: [{ tipo: 'fresadora', subtipo: 'metal' }],
-    nombre: 'Canvi eina', descripcion: 'Sustitución de fresa por desgaste según material.',
+    nombre: 'Cambio de herramienta', descripcion: 'Sustitución de fresa por desgaste según material.',
     unidad: 'usos', cada_n: 150, accionId: 'canvi_eina',
     fuente: 'Vida media fresa en titanio/CoCr: 100-200 usos.' },
 
   // -- Fresadoras SECO ---------------------------------------------------------
   { id: 't-seco-calibrat',      aplicaA: [{ tipo: 'fresadora', subtipo: 'seco' }],
-    nombre: 'Calibrat eixos', descripcion: 'Calibración de los ejes y verificación de precisión.',
+    nombre: 'Calibrado de ejes', descripcion: 'Calibración de los ejes y verificación de precisión.',
     unidad: 'meses', cada_n: 6, accionId: 'calibrat_eixos',
     fuente: 'Roland/vhf recomienda calibración semestral.' },
   { id: 't-seco-spindle',       aplicaA: [{ tipo: 'fresadora', subtipo: 'seco' }],
@@ -164,17 +168,17 @@ export const PLANTILLAS_PLAN: PlantillaPlan[] = [
     unidad: 'meses', cada_n: 12, accionId: 'spindle',
     fuente: 'Vida útil rodamientos spindle dental: 5000h ~ 1 año.' },
   { id: 't-seco-neteja',        aplicaA: [{ tipo: 'fresadora', subtipo: 'seco' }],
-    nombre: 'Neteja interior', descripcion: 'Limpieza del interior de la cabina y aspiración.',
+    nombre: 'Limpieza interior', descripcion: 'Limpieza del interior de la cabina y aspiración.',
     unidad: 'semanas', cada_n: 1, accionId: 'neteja_interior',
     fuente: 'Limpieza semanal recomendada para zirconia/PMMA.' },
   { id: 't-seco-eina',          aplicaA: [{ tipo: 'fresadora', subtipo: 'seco' }],
-    nombre: 'Canvi eina', descripcion: 'Sustitución de fresas por desgaste (zirconia/PMMA).',
+    nombre: 'Cambio de herramienta', descripcion: 'Sustitución de fresas por desgaste (zirconia/PMMA).',
     unidad: 'usos', cada_n: 250, accionId: 'canvi_eina',
     fuente: 'Fresas dentales en zirconia: 200-300 piezas típicas.' },
 
   // -- Fresadoras HÚMEDO -------------------------------------------------------
   { id: 't-hum-calibrat',       aplicaA: [{ tipo: 'fresadora', subtipo: 'humedo' }],
-    nombre: 'Calibrat', descripcion: 'Calibración periódica de ejes y precisión.',
+    nombre: 'Calibrado', descripcion: 'Calibración periódica de ejes y precisión.',
     unidad: 'meses', cada_n: 6, accionId: 'calibrat',
     fuente: 'Fabricantes CAD-CAM dental: 6 meses.' },
   { id: 't-hum-spindle',        aplicaA: [{ tipo: 'fresadora', subtipo: 'humedo' }],
@@ -182,23 +186,23 @@ export const PLANTILLAS_PLAN: PlantillaPlan[] = [
     unidad: 'meses', cada_n: 12, accionId: 'spindle',
     fuente: 'Vida útil rodamientos spindle dental: 5000h ~ 1 año.' },
   { id: 't-hum-diposit',        aplicaA: [{ tipo: 'fresadora', subtipo: 'humedo' }],
-    nombre: 'Dipòsit (aigua + additiu)', descripcion: 'Renovar mezcla refrigerante del depósito.',
+    nombre: 'Depósito (agua + aditivo)', descripcion: 'Renovar mezcla refrigerante del depósito.',
     unidad: 'meses', cada_n: 3, accionId: 'diposit',
     fuente: 'Refrigerantes sintéticos: 2-4 meses.' },
   { id: 't-hum-filtres',        aplicaA: [{ tipo: 'fresadora', subtipo: 'humedo' }],
-    nombre: 'Filtres', descripcion: 'Sustitución de filtros del circuito de refrigerante.',
+    nombre: 'Filtros', descripcion: 'Sustitución de filtros del circuito de refrigerante.',
     unidad: 'meses', cada_n: 6, accionId: 'filtres',
     fuente: 'Filtros papel/malla en CAM húmedo: 3-6 meses.' },
   { id: 't-hum-canal',          aplicaA: [{ tipo: 'fresadora', subtipo: 'humedo' }],
-    nombre: 'Canal chorro', descripcion: 'Limpieza del canal del chorro de refrigerante.',
+    nombre: 'Canal de chorro', descripcion: 'Limpieza del canal del chorro de refrigerante.',
     unidad: 'meses', cada_n: 1, accionId: 'canal_chorro',
     fuente: 'Limpieza mensual estándar.' },
   { id: 't-hum-neteja',         aplicaA: [{ tipo: 'fresadora', subtipo: 'humedo' }],
-    nombre: 'Neteja interior', descripcion: 'Limpieza del interior de la cabina y aspiración.',
+    nombre: 'Limpieza interior', descripcion: 'Limpieza del interior de la cabina y aspiración.',
     unidad: 'semanas', cada_n: 1, accionId: 'neteja_interior',
     fuente: 'Limpieza semanal recomendada.' },
   { id: 't-hum-eina',           aplicaA: [{ tipo: 'fresadora', subtipo: 'humedo' }],
-    nombre: 'Canvi eina', descripcion: 'Sustitución de fresas por desgaste (vidrio/cerámica).',
+    nombre: 'Cambio de herramienta', descripcion: 'Sustitución de fresas por desgaste (vidrio/cerámica).',
     unidad: 'usos', cada_n: 100, accionId: 'canvi_eina',
     fuente: 'Fresas diamantadas en disilicato/feldespato: 80-150 piezas.' },
 
@@ -208,11 +212,11 @@ export const PLANTILLAS_PLAN: PlantillaPlan[] = [
     unidad: 'meses', cada_n: 12, accionId: 'cutter',
     fuente: 'Recoater blade SLM dental: anual o por degradación.' },
   { id: 't-sint-filtre',        aplicaA: [{ tipo: 'sinterizadora' }],
-    nombre: 'Filtre', descripcion: 'Sustitución del filtro principal de gas/proceso.',
+    nombre: 'Filtro', descripcion: 'Sustitución del filtro principal de gas/proceso.',
     unidad: 'meses', cada_n: 6, accionId: 'filtre',
     fuente: 'Filtro proceso SLM: 500-1000h o 6 meses.' },
   { id: 't-sint-filtre-post',   aplicaA: [{ tipo: 'sinterizadora' }],
-    nombre: 'Filtre posterior', descripcion: 'Sustitución del filtro posterior/HEPA.',
+    nombre: 'Filtro posterior', descripcion: 'Sustitución del filtro posterior/HEPA.',
     unidad: 'meses', cada_n: 12, accionId: 'filtre_posterior',
     fuente: 'Filtro HEPA cabina: anual.' },
   { id: 't-sint-piab',          aplicaA: [{ tipo: 'sinterizadora' }],
@@ -220,25 +224,25 @@ export const PLANTILLAS_PLAN: PlantillaPlan[] = [
     unidad: 'meses', cada_n: 3, accionId: 'piab',
     fuente: 'Aspiradores PIAB industrial: 3-6 meses según uso.' },
   { id: 't-sint-o2',            aplicaA: [{ tipo: 'sinterizadora' }],
-    nombre: "Sensor d'oxigen", descripcion: 'Verificación/sustitución del sensor de oxígeno.',
+    nombre: 'Sensor de oxígeno', descripcion: 'Verificación/sustitución del sensor de oxígeno.',
     unidad: 'meses', cada_n: 12, accionId: 'sensor_oxigen',
     fuente: 'Vida útil típica sensor O2: 12-18 meses.' },
   { id: 't-sint-calibrat',      aplicaA: [{ tipo: 'sinterizadora' }],
-    nombre: 'Calibrat', descripcion: 'Calibración del láser y verificación de potencia.',
+    nombre: 'Calibrado', descripcion: 'Calibración del láser y verificación de potencia.',
     unidad: 'meses', cada_n: 6, accionId: 'calibrat',
     fuente: 'Calibración SLM dental: semestral.' },
 
   // -- Impresoras 3D -----------------------------------------------------------
   { id: 't-imp-calibrat',       aplicaA: [{ tipo: 'impresora_3d' }],
-    nombre: 'Calibrat', descripcion: 'Calibración de la plataforma de impresión y nivelado.',
+    nombre: 'Calibrado', descripcion: 'Calibración de la plataforma de impresión y nivelado.',
     unidad: 'meses', cada_n: 6, accionId: 'calibrat',
     fuente: 'DLP/LCD dental: 6 meses o tras movimiento del equipo.' },
   { id: 't-imp-base',           aplicaA: [{ tipo: 'impresora_3d' }],
-    nombre: 'Canvi base safata', descripcion: 'Sustitución del FEP / base de la cubeta.',
+    nombre: 'Cambio de base de bandeja', descripcion: 'Sustitución del FEP / base de la cubeta.',
     unidad: 'usos', cada_n: 100, accionId: 'canvi_base_safata',
     fuente: 'Vida útil FEP en DLP dental: 50-150 impresiones.' },
   { id: 't-imp-neteja',         aplicaA: [{ tipo: 'impresora_3d' }],
-    nombre: 'Neteja', descripcion: 'Limpieza de la cubeta, pantalla LCD y plataforma.',
+    nombre: 'Limpieza', descripcion: 'Limpieza de la cubeta, pantalla LCD y plataforma.',
     unidad: 'semanas', cada_n: 1, accionId: 'neteja',
     fuente: 'Limpieza semanal o tras cada lote.' },
 ]
