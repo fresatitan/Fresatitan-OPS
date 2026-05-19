@@ -252,16 +252,33 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
             subtitle="Toca las acciones realizadas. Puedes seleccionar varias."
           >
             <div className="space-y-3">
-              {/* Catálogo de acciones (chips) */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {/* Catálogo de acciones (chips).
+                  Altura uniforme: todas las celdas del grid alcanzan la misma
+                  altura mediante 'auto-rows-fr' y el contenido se distribuye
+                  con flex-col + justify-between para que el subtítulo (o su
+                  hueco reservado) quede siempre alineado al borde inferior. */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 auto-rows-fr">
                 {acciones.map((a) => {
                   const isSel = accSeleccionadas.includes(a.id)
+                  // Texto del subtítulo (siempre presente para mantener layout uniforme;
+                  // si no aplica, se reserva el espacio con un caracter invisible).
+                  let subtitulo = ' '
+                  if (a.einas !== undefined) {
+                    subtitulo = isSel && einasMarcadas.length > 0
+                      ? `Herramientas: ${einasMarcadas.sort((a, b) => a - b).join(', ')}`
+                      : `Elegir 1 a ${a.einas}`
+                  } else if (a.esOtros) {
+                    subtitulo = isSel && otrosTexto.trim().length > 0
+                      ? otrosTexto.trim().slice(0, 28) + (otrosTexto.trim().length > 28 ? '…' : '')
+                      : 'Casos no listados'
+                  }
                   return (
                     <button
                       key={a.id}
                       onClick={() => toggleAccion(a.id)}
                       className={`
-                        px-3 py-3 rounded-lg border-2 text-sm font-semibold text-left
+                        relative flex flex-col justify-between gap-2
+                        min-h-[78px] px-3 py-2.5 rounded-lg border-2 text-left
                         transition-all active:scale-[0.97]
                         ${isSel
                           ? 'bg-mantenimiento/15 border-mantenimiento text-mantenimiento'
@@ -269,14 +286,25 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
                         }
                       `}
                     >
-                      {a.label}
-                      {a.einas !== undefined && (
-                        <span className="block text-[10px] font-normal opacity-80 mt-0.5">
-                          {isSel && einasMarcadas.length > 0
-                            ? `Herramientas: ${einasMarcadas.sort((a, b) => a - b).join(', ')}`
-                            : `Elegir 1..${a.einas}`}
+                      {/* Indicador de check arriba a la derecha cuando está seleccionado */}
+                      {isSel && (
+                        <span
+                          className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-mantenimiento text-white flex items-center justify-center"
+                          aria-hidden="true"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="2 6.5 5 9 10 3.5" />
+                          </svg>
                         </span>
                       )}
+                      <span className="text-sm font-semibold leading-tight pr-5">{a.label}</span>
+                      <span
+                        className={`text-[10px] font-normal leading-tight line-clamp-1 ${
+                          isSel ? 'opacity-90' : 'opacity-60'
+                        }`}
+                      >
+                        {subtitulo}
+                      </span>
                     </button>
                   )
                 })}
