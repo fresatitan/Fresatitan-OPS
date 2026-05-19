@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useAuthStore } from '../../store/authStore'
 import { UNIDADES_PLAN } from '../../constants/estados'
+import { plantillasParaMaquina, type PlantillaPlan } from '../../constants/mantenimiento'
 import type { Maquina, MantenimientoPlan, PlanUnidad } from '../../types/database'
 import type { PlanEstado } from '../../store/workflowStore'
 
@@ -90,7 +91,7 @@ export default function PlanesMantenimientoSection({ maquina }: { maquina: Maqui
       {/* Formulario inline (crear/editar) */}
       {showForm && (
         <PlanForm
-          maquinaId={maquina.id}
+          maquina={maquina}
           plan={editingPlan}
           onClose={handleCloseForm}
         />
@@ -174,16 +175,17 @@ function PlanItem({
 // Formulario inline
 // =============================================================================
 function PlanForm({
-  maquinaId,
+  maquina,
   plan,
   onClose,
 }: {
-  maquinaId: string
+  maquina: Maquina
   plan: MantenimientoPlan | null
   onClose: () => void
 }) {
   const crearPlan = useWorkflowStore((s) => s.crearPlanMantenimiento)
   const actualizarPlan = useWorkflowStore((s) => s.actualizarPlanMantenimiento)
+  const planesExistentes = useWorkflowStore((s) => s.getPlanesByMaquina)(maquina.id)
   const adminUser = useAuthStore((s) => s.user)
 
   const [nombre, setNombre] = useState(plan?.nombre ?? '')
@@ -193,6 +195,24 @@ function PlanForm({
   const [submitting, setSubmitting] = useState(false)
 
   const isEdit = !!plan
+
+  // Plantillas recomendadas para esta máquina, filtrando las que ya tiene
+  // como plan activo (para no sugerir duplicados al crear desde cero).
+  const plantillas = useMemo(() => {
+    const all = plantillasParaMaquina(maquina.tipo, maquina.subtipo)
+    if (isEdit) return all
+    const nombresExistentes = new Set(
+      planesExistentes.map((p) => p.nombre.trim().toLowerCase()),
+    )
+    return all.filter((t) => !nombresExistentes.has(t.nombre.trim().toLowerCase()))
+  }, [maquina.tipo, maquina.subtipo, planesExistentes, isEdit])
+
+  const aplicarPlantilla = (t: PlantillaPlan) => {
+    setNombre(t.nombre)
+    setDescripcion(t.descripcion)
+    setUnidad(t.unidad)
+    setCadaN(t.cada_n)
+  }
 
   const handleSubmit = async () => {
     if (nombre.trim().length === 0 || cadaN <= 0 || submitting) return
@@ -206,7 +226,7 @@ function PlanForm({
       })
     } else {
       await crearPlan({
-        maquina_id: maquinaId,
+        maquina_id: maquina.id,
         nombre: nombre.trim(),
         descripcion: descripcion.trim() || null,
         unidad,
@@ -220,6 +240,41 @@ function PlanForm({
 
   return (
     <div className="rounded border border-primary/30 bg-primary-muted/30 p-3 space-y-2.5">
+      {/* Plantillas recomendadas — solo en alta */}
+      {!isEdit && plantillas.length > 0 && (
+        <div className="rounded border border-border-subtle bg-surface-2 p-2.5 mb-1">
+          <div className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <span>Plantillas recomendadas</span>
+            <span className="font-mono normal-case text-text-tertiary/70">
+              {plantillas.length} disponibles
+            </span>
+          </div>
+          <p className="text-[10px] text-text-tertiary mb-2 leading-snug">
+            Valores típicos del sector CAD-CAM dental. Toca una para pre-rellenar el formulario y ajústala si quieres.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {plantillas.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => aplicarPlantilla(t)}
+                title={`${t.descripcion}\nSugerencia: cada ${t.cada_n} ${UNIDADES_PLAN[t.unidad].label}\n${t.fuente}`}
+                className="
+                  inline-flex items-center gap-1.5 px-2 py-1 rounded
+                  bg-surface-3 border border-border-subtle text-[11px] text-text-secondary
+                  hover:bg-surface-4 hover:text-text-primary hover:border-primary/40
+                  transition-colors
+                "
+              >
+                <span className="font-semibold">{t.nombre}</span>
+                <span className="text-text-tertiary font-mono">
+                  · {t.cada_n} {UNIDADES_PLAN[t.unidad].label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="block text-[10px] text-text-tertiary uppercase tracking-wider mb-1">
           Nombre del plan <span className="text-averia">*</span>

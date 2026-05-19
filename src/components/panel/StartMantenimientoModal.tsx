@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Modal from '../ui/Modal'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
+import { accionesParaMaquina } from '../../constants/mantenimiento'
 import type { Maquina, TipoMantenimiento } from '../../types/database'
 import toast from 'react-hot-toast'
 
@@ -34,13 +35,25 @@ type Step = 'tecnico' | 'tipo' | 'descripcion' | 'confirmar'
 export default function StartMantenimientoModal({ open, onClose, maquina }: Props) {
   const registrarMantenimiento = useWorkflowStore((s) => s.registrarMantenimiento)
   const updateEstadoMaquina = useWorkflowStore((s) => s.updateEstadoMaquina)
+  const getPlanesByMaquina = useWorkflowStore((s) => s.getPlanesByMaquina)
   const trabajadores = useTrabajadoresStore((s) => s.trabajadores)
   const candidatos = trabajadores.filter((t) => t.activo && t.puede_operar)
+
+  // Catálogo de acciones según familia/subfamilia de esta máquina
+  const acciones = useMemo(
+    () => accionesParaMaquina(maquina.tipo, maquina.subtipo),
+    [maquina.tipo, maquina.subtipo],
+  )
 
   const [step, setStep] = useState<Step>('tecnico')
   const [tecnico, setTecnico] = useState<Trabajador | null>(null)
   const [tipo, setTipo] = useState<TipoMantenimiento | null>(null)
-  const [descripcion, setDescripcion] = useState('')
+  // Acciones seleccionadas (IDs del catálogo)
+  const [accSeleccionadas, setAccSeleccionadas] = useState<string[]>([])
+  // Números de eina (cargador) marcados cuando 'canvi_eina' está activa
+  const [einasMarcadas, setEinasMarcadas] = useState<number[]>([])
+  // Texto libre cuando "Otros" está activo
+  const [otrosTexto, setOtrosTexto] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -48,9 +61,81 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
       setStep('tecnico')
       setTecnico(null)
       setTipo(null)
-      setDescripcion('')
+      setAccSeleccionadas([])
+      setEinasMarcadas([])
+      setOtrosTexto('')
     }
   }, [open])
+
+  const tieneCanviEina = accSeleccionadas.some(
+    (id) => acciones.find((a) => a.id === id)?.einas !== undefined,
+  )
+  const tieneOtros = accSeleccionadas.some(
+    (id) => acciones.find((a) => a.id === id)?.esOtros,
+  )
+  const einasMax = acciones.find((a) => a.einas !== undefined)?.einas ?? 0
+
+  const puedeAvanzar =
+    accSeleccionadas.length > 0 &&
+    (!tieneCanviEina || einasMarcadas.length > 0) &&
+    (!tieneOtros || otrosTexto.trim().length > 0)
+
+  const toggleAccion = (id: string) => {
+    setAccSeleccionadas((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      // Si quitamos 'canvi_eina', limpiamos los números seleccionados
+      if (prev.includes(id) && acciones.find((a) => a.id === id)?.einas) {
+        setEinasMarcadas([])
+      }
+      // Si quitamos 'otros', limpiamos el texto
+      if (prev.includes(id) && acciones.find((a) => a.id === id)?.esOtros) {
+        setOtrosTexto('')
+      }
+      return next
+    })
+  }
+
+  const toggleEina = (n: number) => {
+    setEinasMarcadas((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]))
+  }
+
+  /** Serializa las acciones seleccionadas en un string legible para `accion_realizada` */
+  const construirDescripcion = (): string => {
+    const partes: string[] = []
+    for (const id of accSeleccionadas) {
+      const def = acciones.find((a) => a.id === id)
+      if (!def) continue
+      if (def.einas) {
+        const nums = [...einasMarcadas].sort((a, b) => a - b)
+        partes.push(nums.length > 0 ? `${def.label} #${nums.join(', #')}` : def.label)
+      } else if (def.esOtros) {
+        const t = otrosTexto.trim()
+        partes.push(t ? `Otros: ${t}` : 'Otros')
+      } else {
+        partes.push(def.label)
+      }
+    }
+    return partes.join(' · ')
+  }
+
+  /**
+   * Busca un plan activo de esta máquina cuyo nombre coincida con alguna de las
+   * acciones seleccionadas. Si lo encuentra, lo vincula al mantenimiento para
+   * que el trigger SQL reinicie el contador del plan automáticamente.
+   */
+  const buscarPlanCoincidente = (): string | null => {
+    const planes = getPlanesByMaquina(maquina.id)
+    if (planes.length === 0) return null
+    for (const id of accSeleccionadas) {
+      const def = acciones.find((a) => a.id === id)
+      if (!def || def.esOtros) continue
+      const plan = planes.find(
+        (p) => p.nombre.trim().toLowerCase() === def.label.trim().toLowerCase(),
+      )
+      if (plan) return plan.id
+    }
+    return null
+  }
 
   const handleSelectTecnico = (t: Trabajador) => {
     setTecnico(t)
@@ -63,14 +148,18 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
   }
 
   const handleConfirmar = async () => {
-    if (!tecnico || !tipo || !descripcion.trim()) return
+    if (!tecnico || !tipo || !puedeAvanzar) return
     setSubmitting(true)
+
+    const descripcion = construirDescripcion()
+    const planId = buscarPlanCoincidente()
 
     const id = await registrarMantenimiento({
       maquina_id: maquina.id,
       tipo,
-      accion_realizada: descripcion.trim(),
+      accion_realizada: descripcion,
       persona_encargada_id: tecnico.id,
+      plan_id: planId,
     })
 
     if (!id) {
@@ -159,21 +248,90 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
         {/* Step 3: Description */}
         {step === 'descripcion' && (
           <StepContent
-            title="Describe la intervención"
-            subtitle="Breve descripción de lo que vas a hacer o has hecho."
+            title="¿Qué se ha hecho?"
+            subtitle="Toca las acciones realizadas. Puedes seleccionar varias."
           >
-            <div className="space-y-4">
-              <textarea
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
-                rows={4}
-                placeholder="Ej: Cambio de fresa desgastada, limpieza de cabezal, calibración de ejes..."
-                className="input-field resize-none text-base"
-                autoFocus
-              />
+            <div className="space-y-3">
+              {/* Catálogo de acciones (chips) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {acciones.map((a) => {
+                  const isSel = accSeleccionadas.includes(a.id)
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => toggleAccion(a.id)}
+                      className={`
+                        px-3 py-3 rounded-lg border-2 text-sm font-semibold text-left
+                        transition-all active:scale-[0.97]
+                        ${isSel
+                          ? 'bg-mantenimiento/15 border-mantenimiento text-mantenimiento'
+                          : 'bg-surface-2 border-border-subtle text-text-primary hover:border-mantenimiento/40'
+                        }
+                      `}
+                    >
+                      {a.label}
+                      {a.einas !== undefined && (
+                        <span className="block text-[10px] font-normal opacity-80 mt-0.5">
+                          {isSel && einasMarcadas.length > 0
+                            ? `Eines: ${einasMarcadas.sort((a, b) => a - b).join(', ')}`
+                            : `Elegir 1..${a.einas}`}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Sub-panel: números de eina (1..N) si Canvi eina está activo */}
+              {tieneCanviEina && (
+                <div className="rounded-lg border border-mantenimiento/30 bg-mantenimiento/5 p-3">
+                  <div className="text-[11px] uppercase tracking-wider text-mantenimiento font-semibold mb-2">
+                    ¿Qué eina(s) has cambiado?
+                  </div>
+                  <div className="grid grid-cols-7 sm:grid-cols-9 gap-1.5">
+                    {Array.from({ length: einasMax }, (_, i) => i + 1).map((n) => {
+                      const isSel = einasMarcadas.includes(n)
+                      return (
+                        <button
+                          key={n}
+                          onClick={() => toggleEina(n)}
+                          className={`
+                            aspect-square rounded-md border-2 text-sm font-mono font-bold
+                            transition-all active:scale-[0.95]
+                            ${isSel
+                              ? 'bg-mantenimiento text-white border-mantenimiento'
+                              : 'bg-surface-3 border-border-subtle text-text-secondary hover:border-mantenimiento/40'
+                            }
+                          `}
+                        >
+                          {n}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-panel: texto libre para "Otros" */}
+              {tieneOtros && (
+                <div className="rounded-lg border border-mantenimiento/30 bg-mantenimiento/5 p-3">
+                  <div className="text-[11px] uppercase tracking-wider text-mantenimiento font-semibold mb-2">
+                    Describe la intervención (Otros)
+                  </div>
+                  <textarea
+                    value={otrosTexto}
+                    onChange={(e) => setOtrosTexto(e.target.value)}
+                    rows={3}
+                    placeholder="Ej: Cable de alimentación dañado, reemplazado"
+                    className="input-field resize-none text-sm w-full"
+                    autoFocus
+                  />
+                </div>
+              )}
+
               <button
                 onClick={() => setStep('confirmar')}
-                disabled={!descripcion.trim()}
+                disabled={!puedeAvanzar}
                 className="w-full py-5 rounded-xl text-lg font-bold bg-mantenimiento text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-mantenimiento/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continuar
@@ -207,7 +365,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
               <div className="flex items-start gap-3">
                 <span className="text-xl w-8 text-center">📝</span>
                 <span className="text-xs text-text-tertiary uppercase tracking-wider w-20 pt-1">Acción</span>
-                <span className="text-sm text-text-secondary flex-1">{descripcion}</span>
+                <span className="text-sm text-text-secondary flex-1">{construirDescripcion()}</span>
               </div>
             </div>
 
