@@ -5,6 +5,7 @@ import MaquinaWorkCard from '../components/maquinas/MaquinaWorkCard'
 import CompletedWorkCard from '../components/maquinas/CompletedWorkCard'
 import MaquinaFormModal from '../components/maquinas/MaquinaFormModal'
 import HistorialAveriasModal from '../components/maquinas/HistorialAveriasModal'
+import PlanesMantenimientoModal from '../components/maquinas/PlanesMantenimientoModal'
 import { useWorkflowStore } from '../store/workflowStore'
 import { toIsoDateTime } from '../lib/utils'
 import type { Maquina } from '../types/database'
@@ -60,6 +61,7 @@ export default function Maquinas() {
   const [showCreate, setShowCreate] = useState(false)
   const [editTarget, setEditTarget] = useState<Maquina | null>(null)
   const [historialFor, setHistorialFor] = useState<Maquina | null>(null)
+  const [planesFor, setPlanesFor] = useState<Maquina | null>(null)
 
   const filtered = useMemo(
     () => filter === 'todas'
@@ -179,6 +181,7 @@ export default function Maquinas() {
                             key={m.id}
                             maquina={m}
                             onHistorial={() => setHistorialFor(m)}
+                            onPlanes={() => setPlanesFor(m)}
                             onEdit={() => setEditTarget(m)}
                           />
                         ))}
@@ -235,6 +238,13 @@ export default function Maquinas() {
           open={!!historialFor}
           onClose={() => setHistorialFor(null)}
           maquina={historialFor}
+        />
+      )}
+      {planesFor && (
+        <PlanesMantenimientoModal
+          open={!!planesFor}
+          onClose={() => setPlanesFor(null)}
+          maquina={planesFor}
         />
       )}
     </Layout>

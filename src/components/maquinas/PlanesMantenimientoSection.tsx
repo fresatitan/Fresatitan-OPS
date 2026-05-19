@@ -69,23 +69,21 @@ export default function PlanesMantenimientoSection({ maquina }: { maquina: Maqui
 
       {/* Lista de planes existentes */}
       {planes.length === 0 && !showForm ? (
-        <div className="rounded border border-dashed border-border-subtle bg-surface-2 p-3 text-center">
-          <p className="text-xs text-text-tertiary italic">
-            Esta máquina aún no tiene planes de revisión.
-          </p>
-        </div>
+        <EmptyStateConPlantillas maquina={maquina} onNuevoVacio={() => setShowForm(true)} />
       ) : (
-        <ul className="space-y-2 mb-2">
-          {planes.map((plan) => (
-            <PlanItem
-              key={plan.id}
-              plan={plan}
-              estado={getEstadoPlan(plan)}
-              onEdit={() => handleEdit(plan)}
-              onDelete={() => handleDelete(plan)}
-            />
-          ))}
-        </ul>
+        planes.length > 0 && (
+          <ul className="space-y-2 mb-2">
+            {planes.map((plan) => (
+              <PlanItem
+                key={plan.id}
+                plan={plan}
+                estado={getEstadoPlan(plan)}
+                onEdit={() => handleEdit(plan)}
+                onDelete={() => handleDelete(plan)}
+              />
+            ))}
+          </ul>
+        )
       )}
 
       {/* Formulario inline (crear/editar) */}
@@ -347,6 +345,144 @@ function PlanForm({
           className="flex-1 px-3 py-1.5 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {submitting ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear plan'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// Empty state con plantillas — visible cuando la máquina no tiene planes aún
+// =============================================================================
+function EmptyStateConPlantillas({
+  maquina,
+  onNuevoVacio,
+}: {
+  maquina: Maquina
+  onNuevoVacio: () => void
+}) {
+  const crearPlan = useWorkflowStore((s) => s.crearPlanMantenimiento)
+  const adminUser = useAuthStore((s) => s.user)
+
+  const plantillas = useMemo(
+    () => plantillasParaMaquina(maquina.tipo, maquina.subtipo),
+    [maquina.tipo, maquina.subtipo],
+  )
+
+  const [aplicando, setAplicando] = useState<string | null>(null)
+
+  const aplicarTodo = async () => {
+    if (aplicando) return
+    setAplicando('all')
+    for (const t of plantillas) {
+      await crearPlan({
+        maquina_id: maquina.id,
+        nombre: t.nombre,
+        descripcion: t.descripcion,
+        unidad: t.unidad,
+        cada_n: t.cada_n,
+        creado_por: adminUser?.id ?? null,
+      })
+    }
+    setAplicando(null)
+  }
+
+  const aplicarUno = async (t: typeof plantillas[number]) => {
+    if (aplicando) return
+    setAplicando(t.id)
+    await crearPlan({
+      maquina_id: maquina.id,
+      nombre: t.nombre,
+      descripcion: t.descripcion,
+      unidad: t.unidad,
+      cada_n: t.cada_n,
+      creado_por: adminUser?.id ?? null,
+    })
+    setAplicando(null)
+  }
+
+  if (plantillas.length === 0) {
+    // Sin plantillas para esta familia → caemos al estado anterior simple
+    return (
+      <div className="rounded border border-dashed border-border-subtle bg-surface-2 p-4 text-center">
+        <p className="text-xs text-text-tertiary italic mb-3">
+          Esta máquina aún no tiene planes de revisión.
+        </p>
+        <button
+          onClick={onNuevoVacio}
+          className="px-3 py-1.5 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light transition-colors"
+        >
+          + Crear plan vacío
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary-muted/20 p-3.5 space-y-3">
+      <div>
+        <div className="text-[11px] uppercase tracking-wider text-primary font-semibold mb-1">
+          Plantillas recomendadas
+        </div>
+        <p className="text-xs text-text-secondary leading-snug">
+          Estas son las revisiones típicas para esta máquina según los fabricantes
+          del sector CAD-CAM dental. Toca una para añadirla con los valores por
+          defecto — luego puedes editarla con la frecuencia que tú quieras.
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
+        {plantillas.map((t) => {
+          const loading = aplicando === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => aplicarUno(t)}
+              disabled={!!aplicando}
+              className="
+                w-full flex items-center gap-3 px-3 py-2 rounded border
+                bg-surface-2 border-border-subtle text-left
+                hover:border-primary/50 hover:bg-surface-3 transition-colors
+                disabled:opacity-50 disabled:cursor-wait
+              "
+            >
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-text-primary truncate">{t.nombre}</div>
+                <div className="text-[11px] text-text-tertiary truncate">
+                  Cada {t.cada_n} {UNIDADES_PLAN[t.unidad].label} · {t.descripcion}
+                </div>
+              </div>
+              <span className={`shrink-0 text-[11px] font-semibold ${loading ? 'text-text-tertiary' : 'text-primary'}`}>
+                {loading ? 'Añadiendo…' : '+ Añadir'}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <button
+          onClick={aplicarTodo}
+          disabled={!!aplicando}
+          className="
+            px-3 py-1.5 rounded text-xs font-semibold
+            bg-primary text-text-inverse hover:bg-primary-light transition-colors
+            disabled:opacity-50 disabled:cursor-wait
+          "
+        >
+          {aplicando === 'all' ? 'Añadiendo…' : `Añadir las ${plantillas.length} de golpe`}
+        </button>
+        <button
+          onClick={onNuevoVacio}
+          disabled={!!aplicando}
+          className="
+            px-3 py-1.5 rounded text-xs font-medium
+            bg-surface-3 border border-border-subtle text-text-secondary
+            hover:text-text-primary transition-colors
+            disabled:opacity-50
+          "
+        >
+          Prefiero crear uno a medida
         </button>
       </div>
     </div>

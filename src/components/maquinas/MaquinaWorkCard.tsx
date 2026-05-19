@@ -15,9 +15,11 @@ interface Props {
   onHistorial?: () => void
   /** Si se pasa, se muestra un botón de editar la máquina. */
   onEdit?: () => void
+  /** Si se pasa, se muestra un botón de planes de revisión (calendario). */
+  onPlanes?: () => void
 }
 
-export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props) {
+export default function MaquinaWorkCard({ maquina, onHistorial, onEdit, onPlanes }: Props) {
   const usos = useWorkflowStore((s) => s.usos)
   const estadosHistorial = useWorkflowStore((s) => s.estadosHistorial)
   const getUltimaPreparacion = useWorkflowStore((s) => s.getUltimaPreparacion)
@@ -195,6 +197,23 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit }: Props)
             </button>
           )}
 
+          {onPlanes && (
+            <button
+              onClick={onPlanes}
+              title="Programar revisiones / planes de mantenimiento"
+              aria-label="Programar revisiones"
+              className="
+                shrink-0 px-2.5 py-2.5 rounded text-xs font-medium
+                bg-surface-3 border border-border-subtle text-text-secondary
+                hover:bg-surface-4 hover:text-mantenimiento hover:border-mantenimiento/40
+                transition-colors flex items-center justify-center gap-1.5
+              "
+            >
+              <CalendarIcon />
+              <span className="hidden md:inline">Planes</span>
+            </button>
+          )}
+
           {onEdit && (
             <button
               onClick={onEdit}
@@ -295,6 +314,17 @@ function EditIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M11 2l3 3-8 8H3v-3l8-8z" />
+    </svg>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" />
+      <line x1="2.5" y1="6.5" x2="13.5" y2="6.5" />
+      <line x1="5.5" y1="2" x2="5.5" y2="5" />
+      <line x1="10.5" y1="2" x2="10.5" y2="5" />
     </svg>
   )
 }
