@@ -230,3 +230,20 @@ body {
 .animate-fade-in {
   animation: fade-in 0.15s ease-out;
 }
+
+/*
+ * TV PANEL — auto-scroll vertical lento tipo aeropuerto.
+ * Si el contenido es más alto que el viewport, baja despacio hasta dejar
+ * todo a la vista, y vuelve. Si cabe en pantalla, no se mueve (translate3d
+ * a 0 en el reposo).
+ */
+@keyframes tv-scroll {
+  0%   { transform: translate3d(0, 0, 0); }
+  6%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(0, calc(-100% + 100vh - 240px), 0); }
+  56%  { transform: translate3d(0, calc(-100% + 100vh - 240px), 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+.animate-tv-scroll {
+  animation: tv-scroll 60s ease-in-out infinite;
+}

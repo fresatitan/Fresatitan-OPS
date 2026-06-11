@@ -8,6 +8,7 @@ import Alertas from './pages/Alertas'
 import Auditoria from './pages/Auditoria'
 import Informes from './pages/Informes'
 import Panel from './pages/Panel'
+import TvPanel from './pages/TvPanel'
 import Login from './pages/Login'
 import RequireAuth from './components/auth/RequireAuth'
 import { useAuthStore } from './store/authStore'
@@ -56,6 +57,9 @@ export default function App() {
         {/* Panel de Planta — disponible en APK y web */}
         <Route path="/panel" element={<Panel />} />
 
+        {/* Panel TV (modo "aeropuerto") — disponible en APK TV y web admin */}
+        <Route path="/tv" element={<TvPanel />} />
+
         {/* Admin — solo en web, no en APK */}
         {!isNative && (
           <>
@@ -78,7 +82,12 @@ export default function App() {
 
 function CatchAllRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  // En APK nativo siempre va al panel de planta (es la app de trabajadores)
-  if (isNative) return <Navigate to="/panel" replace />
+  // VITE_APP_VARIANT se inyecta en build:
+  //   · sin definir / 'panel'  → APK del operario, abre /panel
+  //   · 'tv'                   → APK de TV, abre /tv directamente
+  const variant = import.meta.env.VITE_APP_VARIANT
+  if (isNative) {
+    return <Navigate to={variant === 'tv' ? '/tv' : '/panel'} replace />
+  }
   return <Navigate to={isAuthenticated ? '/' : '/panel'} replace />
 }
