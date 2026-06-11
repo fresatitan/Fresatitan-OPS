@@ -106,18 +106,18 @@ export default function Panel() {
   return (
     <div className="min-h-screen bg-surface-1 flex flex-col">
       {/* Header minimalista */}
-      <header className="bg-surface-0 border-b border-border-subtle px-6 py-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <img src="/logo-f.png" alt="" className="h-7 w-auto" />
+      <header className="bg-surface-0 border-b border-border-subtle px-4 sm:px-6 lg:px-8 xl:px-10 py-3 sm:py-4 lg:py-5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
+          <img src="/logo-f.png" alt="" className="h-7 sm:h-8 xl:h-10 2xl:h-12 w-auto" />
           <div>
-            <span className="text-lg font-bold text-text-primary tracking-tight">Fresatitan</span>
-            <span className="text-lg font-light text-primary ml-1.5">OPS</span>
+            <span className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-bold text-text-primary tracking-tight">Fresatitan</span>
+            <span className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-light text-primary ml-1.5">OPS</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 xl:gap-4">
           <ThemeToggle variant="panel" />
           <div className="text-right">
-            <div className="text-sm font-semibold text-text-primary">
+            <div className="text-xs sm:text-sm xl:text-base 2xl:text-lg font-semibold text-text-primary">
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
             </div>
             <LiveClock />
@@ -125,7 +125,7 @@ export default function Panel() {
         </div>
       </header>
 
-      <main className="flex-1 px-6 py-6 max-w-5xl mx-auto w-full">
+      <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-5 sm:py-6 lg:py-8 max-w-[1800px]">
         {family === null ? (
           <FamilySelector maquinas={visibles} onSelect={setFamily} />
         ) : (
@@ -217,14 +217,16 @@ function FamilySelector({
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-text-primary">¿Qué máquina vas a usar?</h1>
-        <p className="text-base text-text-secondary mt-2">
+      <div className="mb-6 sm:mb-8 lg:mb-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-text-primary leading-tight">
+          ¿Qué máquina vas a usar?
+        </h1>
+        <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-text-secondary mt-2 sm:mt-3">
           Primero elige la familia. Después verás las máquinas disponibles.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 xl:gap-7">
         {families.map((f) => {
           const ofFamily = maquinas.filter((m) => m.tipo === f.tipo)
           const disponibles = ofFamily.filter((m) => m.estado_actual === 'parada').length
@@ -247,7 +249,8 @@ function FamilySelector({
               onClick={() => !empty && onSelect(f.tipo)}
               disabled={empty}
               className={`
-                relative rounded-2xl border-2 p-6 text-left transition-all w-full min-h-[220px]
+                relative rounded-2xl border-2 p-5 sm:p-6 xl:p-8 text-left transition-all w-full
+                min-h-[200px] sm:min-h-[220px] xl:min-h-[260px] 2xl:min-h-[300px]
                 flex flex-col
                 ${empty
                   ? 'bg-surface-2 border-border-subtle opacity-40 cursor-not-allowed'
@@ -270,8 +273,8 @@ function FamilySelector({
                 </div>
               )}
 
-              <div className="text-4xl text-primary mb-3">{f.icon}</div>
-              <h3 className="text-2xl font-bold text-text-primary leading-tight">
+              <div className="text-4xl sm:text-5xl xl:text-6xl 2xl:text-7xl text-primary mb-3 xl:mb-4">{f.icon}</div>
+              <h3 className="text-2xl sm:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-text-primary leading-tight">
                 {TIPOS_MAQUINA_PLURAL[f.tipo]}
               </h3>
 
@@ -304,8 +307,8 @@ function FamilySelector({
 function FamilyStat({ value, label, color }: { value: number; label: string; color: string }) {
   return (
     <div>
-      <div className={`text-2xl font-mono font-bold tabular-nums ${color}`}>{value}</div>
-      <div className="text-[10px] text-text-tertiary uppercase tracking-wider mt-0.5">{label}</div>
+      <div className={`text-2xl xl:text-3xl 2xl:text-4xl font-mono font-bold tabular-nums ${color}`}>{value}</div>
+      <div className="text-[10px] xl:text-xs text-text-tertiary uppercase tracking-wider mt-0.5">{label}</div>
     </div>
   )
 }
@@ -364,7 +367,7 @@ function MachinesView({
             return (
               <div key={sub}>
                 <SubFamilyTitle subtipo={sub} count={lista.length} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 xl:gap-5">
                   {lista.map((m) => (
                     <PlantMaquinaCard
                       key={m.id}
@@ -379,7 +382,7 @@ function MachinesView({
           })}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 xl:gap-5">
           {[...maquinas]
             .sort((a, b) => estadoPrioridad(a.estado_actual) - estadoPrioridad(b.estado_actual))
             .map((m) => (
@@ -485,7 +488,7 @@ function PlantMaquinaCard({
     <button
       onClick={onClick}
       className={`
-        relative rounded-2xl border-2 p-5 text-left transition-all w-full min-h-[180px]
+        relative rounded-2xl border-2 p-4 sm:p-5 xl:p-6 text-left transition-all w-full min-h-[180px] xl:min-h-[210px] 2xl:min-h-[240px]
         flex flex-col
         ${isAvailable && !warning ? 'bg-surface-2 border-border-subtle hover:border-primary hover:bg-surface-3 active:scale-[0.98]' : ''}
         ${isInUse    && !warning ? 'bg-activa/10 border-activa/40 hover:bg-activa/15 active:scale-[0.98]' : ''}
@@ -495,7 +498,7 @@ function PlantMaquinaCard({
     >
       {/* Banner de advertencia no-bloqueante — cuando hay avería reportada */}
       {warning && (
-        <div className="-mx-5 -mt-5 mb-3 px-4 py-2 rounded-t-2xl bg-averia text-white flex items-center gap-2">
+        <div className="-mx-4 sm:-mx-5 xl:-mx-6 -mt-4 sm:-mt-5 xl:-mt-6 mb-3 px-4 py-2 rounded-t-2xl bg-averia text-white flex items-center gap-2">
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
@@ -511,13 +514,13 @@ function PlantMaquinaCard({
 
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <span className="font-mono text-sm text-primary font-bold">{maquina.codigo}</span>
+        <span className="font-mono text-sm xl:text-base text-primary font-bold">{maquina.codigo}</span>
         <StatusBadge estado={maquina.estado_actual} />
       </div>
 
       {/* Nombre */}
       <div className="mb-2">
-        <h3 className="text-lg font-bold text-text-primary leading-tight">{maquina.nombre}</h3>
+        <h3 className="text-lg xl:text-xl 2xl:text-2xl font-bold text-text-primary leading-tight">{maquina.nombre}</h3>
         <div className="flex items-center gap-2 mt-1">
           <span className="text-xs text-text-tertiary uppercase tracking-wider">
             {TIPOS_MAQUINA[maquina.tipo]}
@@ -763,5 +766,5 @@ function LiveClock() {
   }, [])
   const now = new Date()
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-  return <div className="text-2xl font-mono font-bold text-primary tabular-nums">{time}</div>
+  return <div className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-mono font-bold text-primary tabular-nums">{time}</div>
 }
