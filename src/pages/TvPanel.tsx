@@ -56,64 +56,127 @@ export default function TvPanel() {
       className="flex flex-col h-screen w-screen overflow-hidden"
       style={{ backgroundColor: '#0A0A0A', color: '#F0F0F0' }}
     >
+      {/* Header opaco con TODA la información estática: logo, reloj, KPIs
+          y leyenda. Queda fijo arriba, con z-index para que la lista que
+          corre por debajo NUNCA lo tape. */}
       <Header kpis={kpis} />
+      {/* Zona inferior: lista en bucle. Confinada con overflow-hidden y
+          relative para que la animación no salga del contenedor. */}
       <ScrollLoop>
         {bloques.map((b) => (
           <Bloque key={b.id} bloque={b} usos={usos} />
         ))}
       </ScrollLoop>
-      <Leyenda />
     </div>
   )
 }
 
 // =============================================================================
-// HEADER — logo + título + reloj + KPIs en banner superior
+// HEADER — banner superior fijo con TODA la información estática:
+// logo + reloj/fecha arriba, KPIs grandes en medio, leyenda de colores abajo.
+// Z-index elevado para que la lista que corre por debajo nunca lo tape.
 // =============================================================================
 function Header({ kpis }: { kpis: { activas: number; libres: number; mant: number; averia: number; total: number } }) {
   return (
     <header
-      className="shrink-0 grid grid-cols-[auto_1fr_auto] items-center gap-8 px-8 py-4 border-b-2"
+      className="shrink-0 relative"
       style={{
         backgroundColor: '#080808',
-        borderColor: 'rgba(208, 154, 64, 0.35)',
+        borderBottom: '2px solid rgba(208, 154, 64, 0.35)',
+        zIndex: 10,
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.6)',
       }}
     >
-      <div className="flex items-center gap-4">
-        <img
-          src="/logo-f.png"
-          alt=""
-          style={{ height: 56, width: 'auto', objectFit: 'contain', display: 'block' }}
-        />
-        <div style={{ lineHeight: 1 }}>
-          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em' }}>
-            <span style={{ color: '#F0F0F0' }}>Fresatitan</span>
-            <span style={{ color: '#D09A40', marginLeft: 10, fontWeight: 300 }}>OPS</span>
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              color: '#888',
-              textTransform: 'uppercase',
-              letterSpacing: '0.35em',
-              marginTop: 6,
-            }}
-          >
-            Estado de planta · Tiempo real
+      {/* Fila superior: logo + título + reloj/fecha a la derecha */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '14px 28px 10px 28px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <img
+            src="/logo-f.png"
+            alt=""
+            style={{ height: 52, width: 'auto', objectFit: 'contain', display: 'block' }}
+          />
+          <div style={{ lineHeight: 1 }}>
+            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em' }}>
+              <span style={{ color: '#F0F0F0' }}>Fresatitan</span>
+              <span style={{ color: '#D09A40', marginLeft: 10, fontWeight: 300 }}>OPS</span>
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: '#888',
+                textTransform: 'uppercase',
+                letterSpacing: '0.32em',
+                marginTop: 6,
+              }}
+            >
+              Estado de planta · Tiempo real
+            </div>
           </div>
         </div>
+
+        <RelojGigante />
       </div>
 
-      {/* KPIs centrales */}
-      <div className="grid grid-cols-4 gap-3 max-w-3xl mx-auto w-full">
+      {/* Fila media: KPIs grandes */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gap: 14,
+          padding: '4px 28px 14px 28px',
+        }}
+      >
         <Kpi label="En uso" value={kpis.activas} color="#22C55E" />
         <Kpi label="Libres" value={kpis.libres} color="#D09A40" />
-        <Kpi label="Manten." value={kpis.mant} color="#3B82F6" />
+        <Kpi label="Mantenimiento" value={kpis.mant} color="#3B82F6" />
         <Kpi label="Avería" value={kpis.averia} color="#EF4444" />
       </div>
 
-      <RelojGigante />
+      {/* Fila inferior: leyenda compacta */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 28px',
+          borderTop: '1px solid rgba(208, 154, 64, 0.15)',
+          backgroundColor: '#050505',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+          <ItemLeyenda color="#22C55E" label="En uso" />
+          <ItemLeyenda color="#D09A40" label="Libre" />
+          <ItemLeyenda color="#3B82F6" label="Mantenimiento" />
+          <ItemLeyenda color="#EF4444" label="Avería" />
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: '#666',
+            textTransform: 'uppercase',
+            letterSpacing: '0.3em',
+          }}
+        >
+          Fresatitan OPS · TV · actualización automática
+        </div>
+      </div>
     </header>
+  )
+}
+
+function ItemLeyenda({ color, label }: { color: string; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ width: 11, height: 11, borderRadius: '50%', backgroundColor: color }} />
+      <span style={{ color: '#CCC', fontSize: 12, fontWeight: 600 }}>{label}</span>
+    </div>
   )
 }
 
@@ -208,30 +271,52 @@ function ScrollLoop({ children }: { children: React.ReactNode }) {
   }, [children])
 
   return (
-    <main className="flex-1 relative overflow-hidden">
+    <main
+      style={{
+        flex: '1 1 0',
+        minHeight: 0,            // imprescindible para que flex-1 confine la altura dentro de flex-col
+        position: 'relative',
+        overflow: 'hidden',
+        zIndex: 1,                // siempre por debajo del header (z=10)
+        backgroundColor: '#0A0A0A',
+      }}
+    >
       <div
         ref={innerRef}
         style={{
           animation: `tv-scroll-loop ${duration}s linear infinite`,
+          willChange: 'transform',
         }}
       >
-        <div style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 12, paddingBottom: 20 }}>
+        <div style={{ paddingLeft: 28, paddingRight: 28, paddingTop: 14, paddingBottom: 14 }}>
           {children}
         </div>
         {/* Duplicado del contenido para que el loop sea visualmente continuo */}
-        <div style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 12, paddingBottom: 20 }} aria-hidden="true">
+        <div style={{ paddingLeft: 28, paddingRight: 28, paddingTop: 14, paddingBottom: 14 }} aria-hidden="true">
           {children}
         </div>
       </div>
 
-      {/* Degradados arriba y abajo para que el corte del loop sea limpio */}
+      {/* Degradados de entrada/salida para suavizar visualmente el corte del scroll */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0"
-        style={{ height: 24, background: 'linear-gradient(180deg, #0A0A0A 0%, transparent 100%)', zIndex: 5 }}
+        style={{
+          position: 'absolute',
+          left: 0, right: 0, top: 0,
+          height: 18,
+          background: 'linear-gradient(180deg, #0A0A0A 0%, transparent 100%)',
+          pointerEvents: 'none',
+          zIndex: 2,
+        }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0"
-        style={{ height: 32, background: 'linear-gradient(0deg, #0A0A0A 0%, transparent 100%)', zIndex: 5 }}
+        style={{
+          position: 'absolute',
+          left: 0, right: 0, bottom: 0,
+          height: 24,
+          background: 'linear-gradient(0deg, #0A0A0A 0%, transparent 100%)',
+          pointerEvents: 'none',
+          zIndex: 2,
+        }}
       />
     </main>
   )
@@ -448,47 +533,6 @@ function Cronometro({ uso }: { uso: UsoEquipo }) {
         {elapsed}
       </div>
     </>
-  )
-}
-
-// =============================================================================
-// LEYENDA pie
-// =============================================================================
-function Leyenda() {
-  return (
-    <footer
-      className="shrink-0 flex items-center justify-between px-8 py-3 border-t-2"
-      style={{
-        backgroundColor: '#080808',
-        borderColor: 'rgba(208, 154, 64, 0.35)',
-      }}
-    >
-      <div className="flex items-center gap-6">
-        <Item color="#22C55E" label="En uso" />
-        <Item color="#D09A40" label="Libre" />
-        <Item color="#3B82F6" label="Mantenimiento" />
-        <Item color="#EF4444" label="Avería" />
-      </div>
-      <div
-        style={{
-          fontSize: 11,
-          color: '#666',
-          textTransform: 'uppercase',
-          letterSpacing: '0.3em',
-        }}
-      >
-        Fresatitan OPS · TV · actualización automática
-      </div>
-    </footer>
-  )
-}
-
-function Item({ color, label }: { color: string; label: string }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: color }} />
-      <span style={{ color: '#CCC', fontSize: 13, fontWeight: 600 }}>{label}</span>
-    </div>
   )
 }
 
