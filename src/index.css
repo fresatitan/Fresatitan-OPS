@@ -232,18 +232,20 @@ body {
 }
 
 /*
- * TV PANEL — auto-scroll vertical lento tipo aeropuerto.
- * Si el contenido es más alto que el viewport, baja despacio hasta dejar
- * todo a la vista, y vuelve. Si cabe en pantalla, no se mueve (translate3d
- * a 0 en el reposo).
+ * TV PANEL — auto-scroll vertical infinito tipo aeropuerto.
+ * El contenedor renderiza el bloque de contenido DOS veces; este
+ * keyframe lo desplaza un 50% hacia arriba (=el tamaño del primer
+ * bloque), de modo que al volver a 0% el bucle parece continuo y nunca
+ * se detiene. El TvPanel ajusta la duración en JS según la altura real
+ * (~40 px/s) para que el ritmo sea constante con listas largas o
+ * cortas.
  */
-@keyframes tv-scroll {
+@keyframes tv-scroll-loop {
   0%   { transform: translate3d(0, 0, 0); }
-  6%   { transform: translate3d(0, 0, 0); }
-  50%  { transform: translate3d(0, calc(-100% + 100vh - 240px), 0); }
-  56%  { transform: translate3d(0, calc(-100% + 100vh - 240px), 0); }
-  100% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, -50%, 0); }
 }
-.animate-tv-scroll {
-  animation: tv-scroll 60s ease-in-out infinite;
+
+@keyframes tv-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50%      { box-shadow: 0 0 0 6px transparent;  opacity: 0.55; }
 }
