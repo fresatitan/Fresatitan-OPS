@@ -121,7 +121,10 @@ function Header({ kpis }: { kpis: { activas: number; libres: number; mant: numbe
           </div>
         </div>
 
-        <RelojGigante />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <ConnectionBadge />
+          <RelojGigante />
+        </div>
       </div>
 
       {/* Fila media: KPIs grandes */}
@@ -213,6 +216,87 @@ function Kpi({ label, value, color }: { label: string; value: number; color: str
       >
         {label}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Indicador ONLINE / RECONECTANDO / OFFLINE.
+ *
+ *   · ONLINE       — hay internet (navigator.onLine) Y el canal Realtime
+ *                    nos envió un evento en los últimos 90 segundos.
+ *   · RECONECTANDO — hay internet pero el canal lleva más de 90 s en silencio
+ *                    (puede ser tráfico nulo o pérdida temporal del WS).
+ *   · OFFLINE      — el dispositivo se quedó sin internet.
+ *
+ * Refresca cada 5 segundos para detectar cambios pronto.
+ */
+function ConnectionBadge() {
+  const lastRealtimeAt = useWorkflowStore((s) => s.lastRealtimeAt)
+  const [, setTick] = useState(0)
+  const [online, setOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  )
+
+  useEffect(() => {
+    const onOnline  = () => setOnline(true)
+    const onOffline = () => setOnline(false)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
+    const id = setInterval(() => setTick((t) => t + 1), 5000)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
+      clearInterval(id)
+    }
+  }, [])
+
+  const STALE_MS = 90_000
+  let label = 'OFFLINE'
+  let color = '#EF4444'
+  if (online) {
+    const ageMs = lastRealtimeAt > 0 ? Date.now() - lastRealtimeAt : Infinity
+    if (ageMs < STALE_MS) {
+      label = 'ONLINE'
+      color = '#22C55E'
+    } else {
+      label = 'RECONECTANDO'
+      color = '#F59E0B'
+    }
+  }
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '6px 12px',
+        borderRadius: 8,
+        backgroundColor: `${color}1A`,
+        border: `1.5px solid ${color}55`,
+      }}
+    >
+      <span
+        style={{
+          display: 'inline-block',
+          width: 9,
+          height: 9,
+          borderRadius: '50%',
+          backgroundColor: color,
+          animation: 'tv-pulse 1.6s ease-in-out infinite',
+        }}
+      />
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: '0.18em',
+          color,
+        }}
+      >
+        {label}
+      </span>
     </div>
   )
 }

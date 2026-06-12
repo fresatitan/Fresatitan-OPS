@@ -165,6 +165,12 @@ interface WorkflowState {
   loading: boolean
   error: string | null
   initialized: boolean
+  /**
+   * Timestamp (ms) del último evento Realtime recibido (postgres_changes).
+   * Lo usamos para detectar pérdidas de conexión en vistas críticas
+   * (ej. la APK TV). Se actualiza en cada listener del canal.
+   */
+  lastRealtimeAt: number
 
   // Lifecycle
   fetchAll: () => Promise<void>
@@ -265,6 +271,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   loading: false,
   error: null,
+  lastRealtimeAt: 0,
   initialized: false,
 
   // ---------------------------------------------------------------------------
@@ -328,6 +335,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         preparaciones: (prepsRes.data ?? []) as Preparacion[],
         loading: false,
         initialized: true,
+        // Un fetchAll exitoso también cuenta como prueba de que la conexión está viva.
+        lastRealtimeAt: Date.now(),
       })
     } catch (err) {
       console.error('[workflowStore] fetchAll error:', err)
@@ -345,7 +354,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   subscribe: () => {
     if (!isSupabaseConfigured || !supabase) return () => {}
 
-    const refetch = () => get().fetchAll()
+    // Marca de actividad Realtime — la usan vistas como la APK TV para mostrar
+    // un indicador ONLINE / OFFLINE. Cualquier evento que llegue del servidor
+    // (o un re-fetch manual) refresca este timestamp.
+    const ping = () => set({ lastRealtimeAt: Date.now() })
+
+    const refetch = () => { ping(); get().fetchAll() }
 
     // Helper: refetch del historial de estados. Lo extraemos para poder llamarlo
     // desde varios listeners diferentes.
@@ -363,6 +377,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const channel = supabase
       .channel('workflow-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'maquinas' }, () => {
+        ping()
         // Forzamos un refetch parcial de maquinas + su historial (para ver motivos de avería)
         supabase!
           .from('maquinas')
@@ -378,9 +393,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       // (confirmación de severidad, cierre, etc.) — el UPDATE en maquinas no
       // dispara si el estado no cambia.
       .on('postgres_changes', { event: '*', schema: 'public', table: 'maquina_estados' }, () => {
+        ping()
         refetchEstados()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'usos_equipo' }, () => {
+        ping()
         supabase!
           .from('usos_equipo')
           .select('*')
@@ -390,6 +407,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidencias' }, () => {
+        ping()
         supabase!
           .from('incidencias')
           .select('*')
@@ -400,6 +418,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mantenimientos' }, refetch)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'averia_documentos' }, () => {
+        ping()
         supabase!
           .from('averia_documentos')
           .select('*')
@@ -409,6 +428,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'averia_pasos' }, () => {
+        ping()
         supabase!
           .from('averia_pasos')
           .select('*')
@@ -419,6 +439,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mantenimiento_planes' }, () => {
+        ping()
         supabase!
           .from('mantenimiento_planes')
           .select('*')
@@ -428,6 +449,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'preparaciones' }, () => {
+        ping()
         supabase!
           .from('preparaciones')
           .select('*')
@@ -438,7 +460,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             if (data) set({ preparaciones: data as Preparacion[] })
           })
       })
-      .subscribe()
+      // Callback de estado del canal: marca SUBSCRIBED como ping inicial; los
+      // estados de error/cierre dejan lastRealtimeAt envejeciendo y el badge
+      // pasará a OFFLINE en el header TV.
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') ping()
+      })
 
     return () => {
       supabase!.removeChannel(channel)
