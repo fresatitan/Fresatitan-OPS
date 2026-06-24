@@ -235,6 +235,8 @@ SUPABASE_SERVICE_ROLE_KEY=   # Solo scripts admin, NUNCA en frontend (sin prefij
 
 ## Skills globales instaladas
 
+**Dedicada de mundo:** `fresatitan-feature` — `.claude/skills/fresatitan-feature/`.
+
 Disponibles en `~/.claude/skills/`:
 - `frontend-design` — diseño UI production-grade
 - `senior-frontend` — patrones React, Next.js, optimización
@@ -266,3 +268,18 @@ La app se llama **FRESATITAN OPS**.
 ### Tipos de proceso
 
 `fresado` · `sinterizado` · `sinterofresado` · `impresion3d` · `ferulas` · `blender` · `otro`
+
+---
+
+## Mundo del universo «Alex 1.0»
+
+Este proyecto es un **mundo** del universo (motor en `../Alex 1.0/CLAUDE.md`).
+
+### Cadencia — Fase 2 (revisión previa)
+Producto de cliente en operación. Implementar features y fixes con autonomía, pero
+**revisar antes de cualquier deploy a producción** (Vercel) o cambio en Supabase.
+
+### Git
+Repo `fresatitan/Fresatitan-OPS`. El git **global** es personal/**Sekees**, así que en
+este repo hay que fijar la identidad **por repo** a la cuenta `fresatitan`
+(`git config user.email …`).

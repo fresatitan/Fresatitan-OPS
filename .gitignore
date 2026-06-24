@@ -35,3 +35,22 @@ dist-ssr
 
 # macOS resource forks (si editas desde Mac)
 ._*
+
+# Android / Capacitor build outputs (no van al repo)
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+android/local.properties
+android/.idea/
+*.apk
+*.aab
+
+# APKs compiladas y artefactos de build pesados
+builds/
+
+# Supabase temporales
+supabase/.temp/
+
+# Screenshots de pruebas (desechables)
+docs/screenshots/

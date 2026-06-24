@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>FRESATITAN OPS — Resumen de trabajos realizados</title>
+<style>
+  @page {
+    size: A4;
+    margin: 2cm 1.8cm;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: #1a1a1a;
+    font-size: 11pt;
+    line-height: 1.55;
+    background: #fff;
+  }
+
+  /* === Portada === */
+  .cover {
+    page-break-after: always;
+    height: calc(100vh - 4cm);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2cm 0;
+  }
+
+  .cover-top {
+    border-top: 4px solid #D09A40;
+    padding-top: 2cm;
+  }
+
+  .cover-brand {
+    font-size: 10pt;
+    letter-spacing: 0.3em;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 0.5cm;
+  }
+
+  .cover-title {
+    font-size: 36pt;
+    font-weight: 700;
+    color: #0A0A0A;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-bottom: 0.3cm;
+  }
+
+  .cover-accent {
+    color: #D09A40;
+  }
+
+  .cover-subtitle {
+    font-size: 14pt;
+    color: #555;
+    font-weight: 300;
+    margin-top: 0.8cm;
+    max-width: 80%;
+  }
+
+  .cover-meta {
+    border-top: 1px solid #e5e5e5;
+    padding-top: 1cm;
+    font-size: 10pt;
+    color: #666;
+  }
+
+  .cover-meta-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3cm 0;
+  }
+
+  .cover-meta-label {
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 9pt;
+  }
+
+  .cover-meta-value {
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+
+  /* === Secciones === */
+  h1 {
+    font-size: 20pt;
+    color: #0A0A0A;
+    font-weight: 700;
+    margin: 1cm 0 0.3cm;
+    padding-bottom: 0.2cm;
+    border-bottom: 2px solid #D09A40;
+    page-break-after: avoid;
+  }
+
+  h2 {
+    font-size: 14pt;
+    color: #0A0A0A;
+    font-weight: 600;
+    margin: 0.8cm 0 0.2cm;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 12pt;
+    color: #333;
+    font-weight: 600;
+    margin: 0.5cm 0 0.2cm;
+    page-break-after: avoid;
+  }
+
+  p { margin: 0.2cm 0; }
+
+  ul {
+    padding-left: 0.5cm;
+    margin: 0.2cm 0;
+    list-style: none;
+  }
+
+  ul li {
+    position: relative;
+    padding-left: 0.6cm;
+    margin: 0.15cm 0;
+  }
+
+  ul li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.4em;
+    width: 6px;
+    height: 6px;
+    background: #D09A40;
+    border-radius: 50%;
+  }
+
+  strong { color: #0A0A0A; font-weight: 600; }
+
+  /* === Secciones numeradas === */
+  .section-number {
+    display: inline-block;
+    background: #D09A40;
+    color: white;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 12pt;
+    font-weight: 700;
+    margin-right: 0.3cm;
+    vertical-align: middle;
+  }
+
+  .section-desc {
+    background: #f9f4ea;
+    border-left: 3px solid #D09A40;
+    padding: 0.4cm 0.5cm;
+    margin: 0.3cm 0 0.5cm;
+    font-style: italic;
+    color: #555;
+    font-size: 10.5pt;
+  }
+
+  /* === Tablas === */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.4cm 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+
+  th {
+    background: #0A0A0A;
+    color: white;
+    text-align: left;
+    padding: 0.25cm 0.4cm;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 9pt;
+    letter-spacing: 0.05em;
+  }
+
+  td {
+    padding: 0.25cm 0.4cm;
+    border-bottom: 1px solid #eee;
+  }
+
+  tr:nth-child(even) td { background: #fafafa; }
+
+  .metric-table td:last-child {
+    font-weight: 600;
+    color: #D09A40;
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+
+  /* === Features === */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3cm;
+    margin: 0.3cm 0;
+  }
+
+  .feature-box {
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 0.4cm;
+    background: #fafafa;
+    page-break-inside: avoid;
+  }
+
+  .feature-box-title {
+    font-weight: 600;
+    color: #D09A40;
+    font-size: 10.5pt;
+    margin-bottom: 0.15cm;
+  }
+
+  .feature-box-text {
+    font-size: 10pt;
+    color: #555;
+  }
+
+  /* === Flujo de pasos === */
+  .flow-steps {
+    margin: 0.4cm 0;
+    counter-reset: step;
+  }
+
+  .flow-step {
+    position: relative;
+    padding-left: 1.2cm;
+    margin-bottom: 0.3cm;
+    counter-increment: step;
+  }
+
+  .flow-step::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0.9cm;
+    height: 0.9cm;
+    line-height: 0.9cm;
+    background: #D09A40;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    font-weight: 700;
+    font-size: 10pt;
+  }
+
+  /* === Cierre === */
+  .closing {
+    background: #0A0A0A;
+    color: white;
+    padding: 1cm;
+    border-radius: 8px;
+    margin: 1cm 0;
+    page-break-inside: avoid;
+  }
+
+  .closing h2 {
+    color: #D09A40;
+    border: none;
+    margin: 0 0 0.3cm;
+  }
+
+  .closing p { color: #ccc; }
+
+  /* === Footer === */
+  .footer {
+    margin-top: 1cm;
+    padding-top: 0.5cm;
+    border-top: 1px solid #e5e5e5;
+    font-size: 9pt;
+    color: #888;
+    text-align: center;
+  }
+
+  /* === Page break helpers === */
+  .page-break { page-break-before: always; }
+  .no-break { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<!-- ============ PORTADA ============ -->
+<div class="cover">
+  <div class="cover-top">
+    <div class="cover-brand">Informe de Desarrollo</div>
+    <div class="cover-title">FRESATITAN<br><span class="cover-accent">OPS</span></div>
+    <div class="cover-subtitle">
+      Sistema integral de control y monitorización de procesos para laboratorio dental CAD-CAM
+    </div>
+  </div>
+
+  <div class="cover-meta">
+    <div class="cover-meta-row">
+      <span class="cover-meta-label">Cliente</span>
+      <span class="cover-meta-value">FRESATITAN, S.L.</span>
+    </div>
+    <div class="cover-meta-row">
+      <span class="cover-meta-label">Proyecto</span>
+      <span class="cover-meta-value">FRESATITAN OPS · Control de planta</span>
+    </div>
+    <div class="cover-meta-row">
+      <span class="cover-meta-label">Documento</span>
+      <span class="cover-meta-value">Resumen de trabajos realizados</span>
+    </div>
+    <div class="cover-meta-row">
+      <span class="cover-meta-label">Fecha</span>
+      <span class="cover-meta-value">Abril 2026</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ INTRODUCCIÓN ============ -->
+<h1>Resumen ejecutivo</h1>
+<p>
+  FRESATITAN OPS es una plataforma digital completa que sustituye el control manual de procesos
+  del laboratorio por un sistema profesional en tiempo real. Permite a los trabajadores registrar
+  su actividad desde tablets en planta mientras la dirección monitoriza todo el flujo desde
+  el ordenador, sin necesidad de recopilar datos manualmente.
+</p>
+<p style="margin-top: 0.3cm;">
+  El proyecto se entrega como <strong>dos aplicaciones conectadas</strong>: una web para administración
+  y una aplicación móvil Android (APK) para los operarios en planta. Ambas comparten la misma
+  base de datos y se sincronizan al instante.
+</p>
+
+<!-- ============ 1. Análisis y diseño ============ -->
+<h1><span class="section-number">1</span>Análisis inicial y diseño</h1>
+<div class="section-desc">
+  Estudio previo del negocio y definición de la arquitectura de la solución.
+</div>
+<ul>
+  <li><strong>Análisis de necesidades</strong>: estudio de los procesos del laboratorio (12 máquinas, 8 trabajadores, procesos CAD-CAM dental)</li>
+  <li><strong>Diseño de dos experiencias diferenciadas</strong>: una para operarios en planta y otra para dirección</li>
+  <li><strong>Imagen de marca</strong>: tema oscuro industrial premium con dorado corporativo (#D09A40)</li>
+  <li><strong>Arquitectura técnica</strong>: elección de tecnologías, flujo de datos y seguridad</li>
+</ul>
+
+<!-- ============ 2. Web admin ============ -->
+<h1><span class="section-number">2</span>Sistema de gestión para administración (Web)</h1>
+<div class="section-desc">
+  Aplicación web desde la que la dirección controla toda la fábrica.
+</div>
+
+<h2>2.1 Panel principal (Dashboard)</h2>
+<ul>
+  <li>Vista general del estado de la fábrica en tiempo real</li>
+  <li>Indicadores en vivo: máquinas activas, averías, mantenimiento</li>
+  <li>Lista de los últimos trabajos completados</li>
+  <li>Gráfico de distribución de estados</li>
+</ul>
+
+<h2>2.2 Gestión de máquinas</h2>
+<ul>
+  <li>Alta, modificación y baja de máquinas</li>
+  <li>Estado visible: activa, parada, avería, mantenimiento, inactiva</li>
+  <li>Filtros por estado (solo las averiadas, solo las activas, etc.)</li>
+  <li>Cronómetro en vivo para cada máquina en uso</li>
+  <li>Vista de actividad con histórico completo por máquina</li>
+</ul>
+
+<h2>2.3 Gestión de trabajadores</h2>
+<ul>
+  <li>Alta, edición y baja de operarios y técnicos</li>
+  <li>Asignación de roles: operario, técnico, supervisor, admin</li>
+  <li>Toggle activo/inactivo (vacaciones, bajas)</li>
+  <li>Control de permisos para operar máquinas</li>
+</ul>
+
+<h2>2.4 Sistema de alertas</h2>
+<ul>
+  <li>Listado centralizado de máquinas averiadas con motivo</li>
+  <li>Trabajos cerrados con incidencias (resultado KO)</li>
+  <li>Trazabilidad: quién reportó qué y cuándo</li>
+</ul>
+
+<h2>2.5 Informes y exportaciones</h2>
+<ul>
+  <li>Filtros por rango de fechas y por máquina específica</li>
+  <li><strong>Excel detallado</strong>: columnas adaptativas según tipo de máquina + hoja de mantenimientos</li>
+  <li><strong>PDF tabla detallada</strong>: informe completo por máquina</li>
+  <li><strong>PDF resumen ejecutivo</strong>: KPIs, gráficas y rankings</li>
+  <li>Lógica inteligente: las sinterizadoras incluyen datos de preparación, las fresadoras no</li>
+</ul>
+
+<!-- ============ 3. APK trabajadores ============ -->
+<h1><span class="section-number">3</span>Aplicación para trabajadores (APK Android)</h1>
+<div class="section-desc">
+  Aplicación móvil instalada en las tablets de planta. Diseñada para uso táctil y sin formación previa.
+</div>
+
+<h2>3.1 Diseño optimizado para tablets</h2>
+<ul>
+  <li>Interfaz táctil con botones grandes (uso con guantes)</li>
+  <li>Sin contraseñas: acceso inmediato</li>
+  <li>Texto grande, legible a distancia</li>
+  <li>Código de colores visible de un vistazo</li>
+</ul>
+
+<h2>3.2 Panel de planta</h2>
+<ul>
+  <li>Vista general de todas las máquinas con su estado</li>
+  <li>Ordenación inteligente: primero las libres, luego en uso, mantenimiento, averías</li>
+  <li>Oculta automáticamente las máquinas retiradas</li>
+  <li>Muestra quién trabaja en cada máquina y hace cuánto</li>
+</ul>
+
+<h2>3.3 Menú de selección al tocar una máquina</h2>
+<div class="feature-grid">
+  <div class="feature-box">
+    <div class="feature-box-title">Producción</div>
+    <div class="feature-box-text">Iniciar un trabajo de producción con el flujo guiado.</div>
+  </div>
+  <div class="feature-box">
+    <div class="feature-box-title">Mantenimiento</div>
+    <div class="feature-box-text">Registrar una intervención técnica sobre la máquina.</div>
+  </div>
+  <div class="feature-box">
+    <div class="feature-box-title">Reportar avería</div>
+    <div class="feature-box-text">Marcar la máquina como fuera de servicio.</div>
+  </div>
+  <div class="feature-box">
+    <div class="feature-box-title">Cerrar trabajo</div>
+    <div class="feature-box-text">Al tocar una máquina en uso, permite cerrar el proceso.</div>
+  </div>
+</div>
+
+<h2>3.4 Flujo de producción (paso a paso)</h2>
+<div class="flow-steps">
+  <div class="flow-step"><strong>¿Quién prepara?</strong> — Solo para máquinas que requieren preparación (sinterizadoras)</div>
+  <div class="flow-step"><strong>¿Quién lanza el programa?</strong> — Solo para CNC Fanuc / Biomill</div>
+  <div class="flow-step"><strong>Confirmar y empezar</strong> — Cronómetro en marcha, máquina marcada como "En uso"</div>
+</div>
+
+<h2>3.5 Flujo de mantenimiento</h2>
+<div class="flow-steps">
+  <div class="flow-step">Selección del técnico que realiza la intervención</div>
+  <div class="flow-step">Tipo: preventivo, correctivo o predictivo</div>
+  <div class="flow-step">Descripción de la intervención</div>
+  <div class="flow-step">Confirmar — la máquina queda marcada en mantenimiento</div>
+</div>
+
+<h2>3.6 Flujo de cierre</h2>
+<div class="flow-steps">
+  <div class="flow-step">¿Quién cierra el trabajo?</div>
+  <div class="flow-step">¿Ha ido todo bien? → <strong>Todo OK</strong> / <strong>Hubo un problema</strong></div>
+  <div class="flow-step">Si hubo problema: describir qué pasó (queda registrado como incidencia)</div>
+</div>
+
+<h2>3.7 Reporte de averías</h2>
+<ul>
+  <li>Accesible en cualquier momento desde el menú de la máquina</li>
+  <li>Selección de quién lo reporta + descripción del problema</li>
+  <li>La máquina queda bloqueada hasta que el admin la resuelva</li>
+  <li>El administrador recibe la alerta <strong>al instante</strong> en su pantalla</li>
+</ul>
+
+<!-- ============ 4. BD ============ -->
+<h1><span class="section-number">4</span>Base de datos profesional</h1>
+<div class="section-desc">
+  Estructura robusta, segura y preparada para crecer.
+</div>
+<ul>
+  <li><strong>7 tablas relacionadas</strong>: perfiles, máquinas, historial de estados, usos de equipo, incidencias, mantenimientos, alertas</li>
+  <li><strong>28 políticas de seguridad</strong> que controlan quién puede ver/modificar qué datos</li>
+  <li><strong>Automatismos</strong>: cambios de estado de máquinas se sincronizan automáticamente</li>
+  <li><strong>Funciones especiales</strong> para reportar y resolver averías desde las tablets</li>
+  <li><strong>Modo de respaldo local</strong>: la aplicación funciona incluso sin conexión para pruebas</li>
+</ul>
+
+<!-- ============ 5. Realtime ============ -->
+<h1><span class="section-number">5</span>Sincronización en tiempo real</h1>
+<div class="section-desc">
+  Todos los dispositivos siempre actualizados, sin refrescar.
+</div>
+<ul>
+  <li>Si un trabajador inicia un uso en una tablet, el admin lo ve al instante</li>
+  <li>Si el admin resuelve una avería, las tablets se actualizan solas</li>
+  <li>Múltiples tablets funcionando a la vez sin conflictos</li>
+  <li>Notificaciones visuales de cambios importantes</li>
+</ul>
+
+<!-- ============ 6. APK ============ -->
+<h1><span class="section-number">6</span>Aplicación móvil nativa (APK)</h1>
+<div class="section-desc">
+  Aplicación Android empaquetada, lista para instalar en cualquier tablet.
+</div>
+<ul>
+  <li><strong>Icono profesional</strong> con la "F" dorada corporativa sobre fondo negro</li>
+  <li><strong>Splash screen</strong> con el logo al arrancar</li>
+  <li><strong>Pantalla que no se apaga</strong> mientras se usa la app (importante en planta)</li>
+  <li><strong>Barra de estado oscura</strong> integrada con el diseño</li>
+  <li>La APK <strong>solo muestra el panel de planta</strong> — sin menús innecesarios para los trabajadores</li>
+  <li>Conectada a la misma base de datos que la web administrativa</li>
+</ul>
+
+<!-- ============ 7. Infraestructura ============ -->
+<h1><span class="section-number">7</span>Infraestructura y despliegue</h1>
+<div class="section-desc">
+  Todo listo para producción con actualizaciones automáticas.
+</div>
+<ul>
+  <li><strong>Aplicación web</strong>: desplegada en la nube (Vercel) con dominio propio</li>
+  <li><strong>Base de datos</strong>: servidor VPS propio (Hostinger) con respaldos automáticos</li>
+  <li><strong>Actualizaciones continuas</strong>: cada mejora se despliega sin interrupciones</li>
+  <li><strong>Sistema de versiones de APK</strong>: todas las compilaciones se guardan numeradas</li>
+  <li><strong>Control de código</strong>: todo versionado en repositorio privado</li>
+</ul>
+
+<!-- ============ 8. Cifras ============ -->
+<h1><span class="section-number">8</span>Cifras del proyecto</h1>
+<table class="metric-table">
+  <tr><th>Métrica</th><th>Valor</th></tr>
+  <tr><td>Líneas de código desarrolladas</td><td>6.200</td></tr>
+  <tr><td>Páginas de la aplicación web</td><td>7</td></tr>
+  <tr><td>Componentes reutilizables</td><td>18</td></tr>
+  <tr><td>Tablas de base de datos</td><td>7</td></tr>
+  <tr><td>Políticas de seguridad</td><td>28</td></tr>
+  <tr><td>Tipos de informe</td><td>3 (Excel + 2 PDFs)</td></tr>
+  <tr><td>Migraciones de base de datos</td><td>6</td></tr>
+  <tr><td>Plataformas soportadas</td><td>2 (Web + Android)</td></tr>
+</table>
+
+<!-- ============ Cierre ============ -->
+<div class="closing">
+  <h2>Resultado final</h2>
+  <p>
+    Una solución completa, profesional y operativa que digitaliza todo el flujo de trabajo
+    del laboratorio, elimina el control manual en papel, da visibilidad en tiempo real a la
+    dirección y genera informes listos para contabilidad y análisis.
+  </p>
+</div>
+
+<div class="footer">
+  FRESATITAN OPS · Documento confidencial · Abril 2026
+</div>
+
+</body>
+</html>
