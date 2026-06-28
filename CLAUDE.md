@@ -17,7 +17,7 @@ La app tiene **dos experiencias diferenciadas**:
 - **Backend / DB**: Supabase (Auth, PostgreSQL, Realtime, Storage)
 - **Estado global**: Zustand
 - **Formularios**: React Hook Form + Zod
-- **Routing**: React Router v6
+- **Routing**: React Router v7 (`react-router-dom` ^7)
 - **Fechas**: date-fns
 - **Exportación**: xlsx (Excel) / jsPDF (PDF)
 - **Gráficas**: Recharts
