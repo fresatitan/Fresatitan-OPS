@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
 import PlanesMantenimientoSection from './PlanesMantenimientoSection'
 import { useWorkflowStore } from '../../store/workflowStore'
-import { TIPOS_MAQUINA, SUBTIPOS_FRESADORA } from '../../constants/estados'
-import type { Maquina, TipoMaquina, SubtipoFresadora } from '../../types/database'
+import { TIPOS_MAQUINA, SUBTIPOS_FRESADORA, SUBTIPOS_SINTERIZADORA } from '../../constants/estados'
+import type { Maquina, TipoMaquina, SubtipoFresadora, SubtipoSinterizadora, SubtipoMaquina } from '../../types/database'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -20,7 +20,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
   const [etiqueta, setEtiqueta] = useState('')
   const [nombre, setNombre] = useState('')
   const [tipo, setTipo] = useState<TipoMaquina>('fresadora')
-  const [subtipo, setSubtipo] = useState<SubtipoFresadora | null>('seco')
+  const [subtipo, setSubtipo] = useState<SubtipoMaquina | null>('seco')
   const [requierePreparacion, setRequierePreparacion] = useState(false)
   const [requiereLanzamiento, setRequiereLanzamiento] = useState(false)
   const [descripcion, setDescripcion] = useState('')
@@ -33,7 +33,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
       setNombre(initial?.nombre ?? '')
       const t = initial?.tipo ?? 'fresadora'
       setTipo(t)
-      setSubtipo(initial?.subtipo ?? (t === 'fresadora' ? 'seco' : null))
+      setSubtipo(initial?.subtipo ?? (t === 'fresadora' ? 'seco' : t === 'sinterizadora' ? 'cr_co' : null))
       // Default: sinterizadoras requieren preparación Y lanzamiento; el resto no
       setRequierePreparacion(initial?.requiere_preparacion ?? (t === 'sinterizadora'))
       setRequiereLanzamiento(initial?.requiere_lanzamiento ?? (t === 'sinterizadora'))
@@ -47,13 +47,13 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
     setTipo(newTipo)
     if (!initial) {
       setRequierePreparacion(newTipo === 'sinterizadora')
-      setSubtipo(newTipo === 'fresadora' ? 'seco' : null)
+      setSubtipo(newTipo === 'fresadora' ? 'seco' : newTipo === 'sinterizadora' ? 'cr_co' : null)
       // Lanzamiento solo en sinterizadoras (acuerdo con cliente, julio 2026)
       setRequiereLanzamiento(newTipo === 'sinterizadora')
     }
   }
 
-  const handleSubtipoChange = (newSubtipo: SubtipoFresadora) => {
+  const handleSubtipoChange = (newSubtipo: SubtipoMaquina) => {
     setSubtipo(newSubtipo)
   }
 
@@ -66,7 +66,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
       etiqueta: etiqueta.trim() || null,
       nombre: nombre.trim(),
       tipo,
-      subtipo: tipo === 'fresadora' ? subtipo : null,
+      subtipo: tipo === 'impresora_3d' ? null : subtipo,
       requiere_preparacion: requierePreparacion,
       requiere_lanzamiento: requiereLanzamiento,
       descripcion: descripcion.trim() || null,
@@ -159,6 +159,33 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
             <p className="text-[10px] text-text-tertiary mt-1">
               METAL: Fanuc / Biomill (CNC). SECO: UP3D, P53. HÚMEDO: Biomill, DS UP3D.
               Determina los procesos disponibles al iniciar un uso.
+            </p>
+          </Field>
+        )}
+
+        {/* Selector de sub-familia: sinterizadoras Cr-Co vs Titanio */}
+        {tipo === 'sinterizadora' && (
+          <Field label="Sub-familia">
+            <div className="grid grid-cols-2 gap-2">
+              {(['cr_co', 'titanio'] as SubtipoSinterizadora[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleSubtipoChange(s)}
+                  className={`
+                    px-3 py-2 rounded border text-xs font-medium transition-colors
+                    ${subtipo === s
+                      ? 'bg-primary-muted border-primary/30 text-primary'
+                      : 'bg-surface-3 border-border-subtle text-text-secondary hover:text-text-primary'
+                    }
+                  `}
+                >
+                  {SUBTIPOS_SINTERIZADORA[s].label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-text-tertiary mt-1">
+              CR-CO: TRUMPF / SISMA (aportación N₂). TITANIO: ZONELAB (aportación Ar).
+              Determina el catálogo de averías habituales.
             </p>
           </Field>
         )}

@@ -12,6 +12,13 @@ export type TipoDocumentoAveria = 'parte_tecnico' | 'factura' | 'foto' | 'otro'
 // e impresoras 3D (no aplica).
 export type SubtipoFresadora = 'metal' | 'seco' | 'humedo'
 
+// Sub-familia para sinterizadoras: Cr-Co (aportación N2) o titanio (aportación
+// Ar). Distingue los catálogos de averías y mantenimiento. NULL en impresoras.
+export type SubtipoSinterizadora = 'cr_co' | 'titanio'
+
+// Unión de todos los subtipos posibles de máquina (columna maquinas.subtipo)
+export type SubtipoMaquina = SubtipoFresadora | SubtipoSinterizadora
+
 // Procesos disponibles. La lista contiene tanto los valores nuevos (mayo 2026)
 // agrupados por sub-familia como los antiguos que se mantienen para usos
 // históricos previos al rediseño.
@@ -56,7 +63,7 @@ export interface Maquina {
   nombre: string
   etiqueta: string | null           // identificador corto de planta (F 1, Zr 2, SINT 4, TI 1…) — coincide con el cartel físico de la máquina
   tipo: TipoMaquina
-  subtipo: SubtipoFresadora | null  // sólo aplica a fresadoras (metal/seco/humedo)
+  subtipo: SubtipoMaquina | null    // fresadoras: metal/seco/humedo · sinterizadoras: cr_co/titanio · impresoras: null
   numero_serie: string | null
   descripcion: string | null
   ubicacion: string | null

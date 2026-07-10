@@ -1,4 +1,4 @@
-import type { EstadoMaquina, RolUsuario, TipoMaquina, ResultadoUso, TipoMantenimiento, SeveridadAveria, TipoProceso, SubtipoFresadora } from '../types/database'
+import type { EstadoMaquina, RolUsuario, TipoMaquina, ResultadoUso, TipoMantenimiento, SeveridadAveria, TipoProceso, SubtipoFresadora, SubtipoSinterizadora, SubtipoMaquina } from '../types/database'
 
 export const ESTADOS_MAQUINA: Record<EstadoMaquina, { label: string; color: string; bg: string }> = {
   activa: { label: 'En uso', color: 'text-activa', bg: 'bg-activa' },
@@ -88,6 +88,12 @@ export const SUBTIPOS_FRESADORA: Record<SubtipoFresadora, { label: string; short
   humedo: { label: 'Húmedo', short: 'HÚMEDO', description: 'Fresado húmedo (Biomill, DS UP3D)' },
 }
 
+// Etiquetas de las sub-familias de sinterizadoras (Cr-Co → N2 · titanio → Ar)
+export const SUBTIPOS_SINTERIZADORA: Record<SubtipoSinterizadora, { label: string; short: string; description: string }> = {
+  cr_co:   { label: 'Cr-Co',   short: 'CR-CO',   description: 'Sinterizado Cr-Co (aportación N₂)' },
+  titanio: { label: 'Titanio', short: 'TITANIO', description: 'Sinterizado titanio (aportación Ar)' },
+}
+
 /**
  * Procesos disponibles por sub-familia.
  *  · Fresadoras: lista depende del subtipo (metal/seco/humedo)
@@ -107,9 +113,9 @@ export const PROCESOS_POR_SUBFAMILIA: Record<SubtipoFresadora | 'sinterizadora' 
  * subtipo. Encapsula la lógica de qué clave usar en PROCESOS_POR_SUBFAMILIA
  * para no tener que repetir el switch en cada componente.
  */
-export function procesosDisponibles(maquina: { tipo: TipoMaquina; subtipo: SubtipoFresadora | null }): TipoProceso[] {
-  if (maquina.tipo === 'fresadora' && maquina.subtipo) {
-    return PROCESOS_POR_SUBFAMILIA[maquina.subtipo]
+export function procesosDisponibles(maquina: { tipo: TipoMaquina; subtipo: SubtipoMaquina | null }): TipoProceso[] {
+  if (maquina.tipo === 'fresadora' && maquina.subtipo && maquina.subtipo in SUBTIPOS_FRESADORA) {
+    return PROCESOS_POR_SUBFAMILIA[maquina.subtipo as SubtipoFresadora]
   }
   if (maquina.tipo === 'sinterizadora') return PROCESOS_POR_SUBFAMILIA.sinterizadora
   if (maquina.tipo === 'impresora_3d')  return PROCESOS_POR_SUBFAMILIA.impresora_3d
@@ -118,25 +124,42 @@ export function procesosDisponibles(maquina: { tipo: TipoMaquina; subtipo: Subti
 }
 
 /**
- * Listado de tipos de incidencia/avería más habituales por sub-familia.
- * Se muestra como desplegable cuando el operario marca "Hubo un problema" al
- * cerrar un uso. Después debe ampliar con texto libre obligatorio.
+ * Opción de incidencia que exige texto libre obligatorio (el resto de tipos
+ * lo dejan opcional — acuerdo con el cliente, julio 2026).
  */
-export const TIPOS_INCIDENCIA_POR_SUBFAMILIA: Record<SubtipoFresadora | 'sinterizadora' | 'impresora_3d', string[]> = {
-  metal:         ['Fallo en la producción', 'Rotura de herramienta', 'Sobre recorrido Z', 'Fallo de giro X-Y', 'Otros'],
-  seco:          ['Fallo en la producción', 'Rotura de herramienta', 'Otros'],
-  humedo:        ['Fallo en la producción', 'Rotura de herramienta', 'Otros'],
-  sinterizadora: ['Fallo en la producción', 'Otros'],
-  impresora_3d:  ['Fallo en la producción', 'Otros'],
+export const INCIDENCIA_OTROS = 'Otros'
+
+/**
+ * Listado oficial de averías más habituales por sub-familia (documento del
+ * cliente, julio 2026). Se muestra como desplegable cuando el operario marca
+ * "Hubo un problema" al cerrar un uso.
+ *
+ * En sinterizadoras, el documento agrupa las tres primeras causas bajo
+ * "Fallo en la producción"; se muestran aplanadas para ahorrar un nivel de
+ * navegación en la tablet. Cr-Co usa aportación de N₂ y titanio de Ar.
+ */
+export const TIPOS_INCIDENCIA_POR_SUBFAMILIA: Record<SubtipoMaquina | 'impresora_3d', string[]> = {
+  // Fresadoras
+  metal:   ['Fallo en la producción', 'Desgaste de herramienta', 'Salto de herramienta', 'Sobre recorrido Z', 'Fallo de giro X-Y', INCIDENCIA_OTROS],
+  seco:    ['Fallo en la producción', 'Rotura de herramienta', INCIDENCIA_OTROS],
+  humedo:  ['Fallo en la producción', 'Rotura de herramienta', INCIDENCIA_OTROS],
+  // Sinterizadoras
+  cr_co:   ['Error del sistema', 'Defecto en la preparación', 'Fallo en la aportación de N₂', INCIDENCIA_OTROS],
+  titanio: ['Error del sistema', 'Defecto en la preparación', 'Fallo en la aportación de Ar', INCIDENCIA_OTROS],
+  // Impresoras 3D
+  impresora_3d: ['Fallo en la producción', INCIDENCIA_OTROS],
 }
 
 /**
  * Devuelve los tipos de incidencia disponibles para una máquina concreta.
  */
-export function tiposIncidenciaDisponibles(maquina: { tipo: TipoMaquina; subtipo: SubtipoFresadora | null }): string[] {
+export function tiposIncidenciaDisponibles(maquina: { tipo: TipoMaquina; subtipo: SubtipoMaquina | null }): string[] {
   if (maquina.tipo === 'fresadora' && maquina.subtipo) {
     return TIPOS_INCIDENCIA_POR_SUBFAMILIA[maquina.subtipo]
   }
-  if (maquina.tipo === 'sinterizadora') return TIPOS_INCIDENCIA_POR_SUBFAMILIA.sinterizadora
+  if (maquina.tipo === 'sinterizadora') {
+    // Default cr_co: 5 de las 6 sinterizadoras lo son; cubre máquinas sin backfill
+    return TIPOS_INCIDENCIA_POR_SUBFAMILIA[maquina.subtipo === 'titanio' ? 'titanio' : 'cr_co']
+  }
   return TIPOS_INCIDENCIA_POR_SUBFAMILIA.impresora_3d
 }

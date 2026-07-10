@@ -1,4 +1,4 @@
-import type { TipoMaquina, SubtipoFresadora, PlanUnidad } from '../types/database'
+import type { TipoMaquina, SubtipoFresadora, SubtipoMaquina, PlanUnidad } from '../types/database'
 
 /**
  * Catálogo de acciones de mantenimiento por familia/subtipo de máquina.
@@ -93,7 +93,7 @@ export const ACCIONES_IMPRESORA_3D: AccionDef[] = [
  */
 export function accionesParaMaquina(
   tipo: TipoMaquina,
-  subtipo: SubtipoFresadora | null,
+  subtipo: SubtipoMaquina | null,
 ): AccionDef[] {
   if (tipo === 'fresadora') {
     if (subtipo === 'metal')  return ACCIONES_FRESADORA_METAL
@@ -253,7 +253,7 @@ export const PLANTILLAS_PLAN: PlantillaPlan[] = [
  */
 export function plantillasParaMaquina(
   tipo: TipoMaquina,
-  subtipo: SubtipoFresadora | null,
+  subtipo: SubtipoMaquina | null,
 ): PlantillaPlan[] {
   return PLANTILLAS_PLAN.filter((p) =>
     p.aplicaA.some((a) => {

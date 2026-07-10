@@ -6,7 +6,7 @@ import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
 import { toIsoDateTime, formatTime } from '../../lib/utils'
-import { tiposIncidenciaDisponibles } from '../../constants/estados'
+import { tiposIncidenciaDisponibles, INCIDENCIA_OTROS } from '../../constants/estados'
 import type { Maquina, UsoEquipo } from '../../types/database'
 import toast from 'react-hot-toast'
 
@@ -97,12 +97,17 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
     }
   }
 
-  /** El operario debe haber elegido un tipo Y haber escrito al menos algo. */
-  const puedeGuardarProblema = !!tipoIncidencia && problema.trim().length > 0
+  /**
+   * El texto libre solo es obligatorio en "Otros" (acuerdo con el cliente,
+   * julio 2026): si el tipo elegido ya describe la avería, con seleccionarlo
+   * basta. En "Otros" no hay contexto, así que el operario debe explicarlo.
+   */
+  const textoObligatorio = tipoIncidencia === INCIDENCIA_OTROS
+  const puedeGuardarProblema = !!tipoIncidencia && (!textoObligatorio || problema.trim().length > 0)
 
   const handleGuardarProblema = () => {
-    if (!puedeGuardarProblema) return
-    finalizar('ko', [{ tipo: tipoIncidencia, descripcion: problema.trim() }])
+    if (!puedeGuardarProblema || !tipoIncidencia) return
+    finalizar('ko', [{ tipo: tipoIncidencia, descripcion: problema.trim() || tipoIncidencia }])
   }
 
   const handleBack = () => {
@@ -206,7 +211,7 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
         {step === 'problema' && (
           <StepContent
             title="¿Qué pasó?"
-            subtitle="Primero elige el tipo de avería y después amplía la información."
+            subtitle="Elige el tipo de avería. Si eliges «Otros», cuéntanos qué pasó."
           >
             <div className="space-y-5">
               {/* Paso 1: tipo de avería (categoría) */}
@@ -238,10 +243,13 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
                 </div>
               </div>
 
-              {/* Paso 2: detalle obligatorio */}
+              {/* Paso 2: detalle — obligatorio solo en "Otros" */}
               <div>
                 <label className="block text-xs text-text-tertiary uppercase tracking-wider mb-2">
-                  Cuéntanos qué pasó <span className="text-averia">*</span>
+                  Cuéntanos qué pasó{' '}
+                  {textoObligatorio
+                    ? <span className="text-averia">*</span>
+                    : <span className="normal-case tracking-normal">(opcional)</span>}
                 </label>
                 <textarea
                   value={problema}
@@ -253,7 +261,12 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
                 />
                 {!tipoIncidencia && (
                   <p className="text-[11px] text-text-tertiary mt-1">
-                    Selecciona primero el tipo de avería para poder describir lo ocurrido.
+                    Selecciona primero el tipo de avería.
+                  </p>
+                )}
+                {textoObligatorio && (
+                  <p className="text-[11px] text-averia mt-1">
+                    Con «Otros» es obligatorio explicar qué pasó para que el jefe pueda revisarlo.
                   </p>
                 )}
               </div>
