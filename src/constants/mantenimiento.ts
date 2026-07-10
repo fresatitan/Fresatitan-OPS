@@ -1,4 +1,4 @@
-import type { TipoMaquina, SubtipoFresadora, SubtipoMaquina, PlanUnidad } from '../types/database'
+import type { TipoMaquina, SubtipoMaquina, PlanUnidad } from '../types/database'
 
 /**
  * Catálogo de acciones de mantenimiento por familia/subtipo de máquina.
@@ -65,16 +65,33 @@ export const ACCIONES_FRESADORA_HUMEDO: AccionDef[] = [
 ]
 
 // -----------------------------------------------------------------------------
-// SINTERIZADORAS
+// SINTERIZADORAS CR-CO (TRUMPF / SISMA — SINT 1-5)
+//
+// Lista oficial del cliente (julio 2026). El antiguo catálogo único de
+// sinterizadoras incluía "Filtro posterior"; el documento oficial lo elimina
+// (Cr-Co lleva un único filtro; titanio lleva tres numerados).
 // -----------------------------------------------------------------------------
-export const ACCIONES_SINTERIZADORA: AccionDef[] = [
-  { id: 'cutter',           label: 'Cutter' },
-  { id: 'filtre',           label: 'Filtro' },
-  { id: 'filtre_posterior', label: 'Filtro posterior' },
-  { id: 'piab',             label: 'PIAB' },
-  { id: 'sensor_oxigen',    label: 'Sensor de oxígeno' },
-  { id: 'calibrat',         label: 'Calibrado' },
-  { id: 'otros',            label: 'Otros', esOtros: true },
+export const ACCIONES_SINTERIZADORA_CR_CO: AccionDef[] = [
+  { id: 'cutter',        label: 'Cutter' },
+  { id: 'filtre',        label: 'Filtro' },
+  { id: 'piab',          label: 'PIAB' },
+  { id: 'sensor_oxigen', label: 'Sensor de oxígeno' },
+  { id: 'calibrat',      label: 'Calibrado' },
+  { id: 'otros',         label: 'Otros', esOtros: true },
+]
+
+// -----------------------------------------------------------------------------
+// SINTERIZADORAS TITANIO (ZONELAB — TI 1)
+// Sin PIAB; tres filtros numerados.
+// -----------------------------------------------------------------------------
+export const ACCIONES_SINTERIZADORA_TI: AccionDef[] = [
+  { id: 'cutter',        label: 'Cutter' },
+  { id: 'filtre_1',      label: 'Filtro 1' },
+  { id: 'filtre_2',      label: 'Filtro 2' },
+  { id: 'filtre_3',      label: 'Filtro 3' },
+  { id: 'sensor_oxigen', label: 'Sensor de oxígeno' },
+  { id: 'calibrat',      label: 'Calibrado' },
+  { id: 'otros',         label: 'Otros', esOtros: true },
 ]
 
 // -----------------------------------------------------------------------------
@@ -102,7 +119,10 @@ export function accionesParaMaquina(
     // Fallback razonable si por algún motivo no hay subtipo
     return ACCIONES_FRESADORA_METAL
   }
-  if (tipo === 'sinterizadora') return ACCIONES_SINTERIZADORA
+  if (tipo === 'sinterizadora') {
+    // Default cr_co: 5 de las 6 sinterizadoras lo son; cubre máquinas sin backfill
+    return subtipo === 'titanio' ? ACCIONES_SINTERIZADORA_TI : ACCIONES_SINTERIZADORA_CR_CO
+  }
   if (tipo === 'impresora_3d')  return ACCIONES_IMPRESORA_3D
   return []
 }
@@ -124,7 +144,7 @@ export type PlantillaPlan = {
   /** Identificador estable de la plantilla */
   id: string
   /** Familia/subfamilia donde es aplicable */
-  aplicaA: Array<{ tipo: TipoMaquina; subtipo?: SubtipoFresadora }>
+  aplicaA: Array<{ tipo: TipoMaquina; subtipo?: SubtipoMaquina }>
   nombre: string
   descripcion: string
   unidad: PlanUnidad
@@ -206,23 +226,11 @@ export const PLANTILLAS_PLAN: PlantillaPlan[] = [
     unidad: 'usos', cada_n: 100, accionId: 'canvi_eina',
     fuente: 'Fresas diamantadas en disilicato/feldespato: 80-150 piezas.' },
 
-  // -- Sinterizadoras ----------------------------------------------------------
+  // -- Sinterizadoras (comunes Cr-Co + TI) --------------------------------------
   { id: 't-sint-cutter',        aplicaA: [{ tipo: 'sinterizadora' }],
     nombre: 'Cutter', descripcion: 'Sustitución de la cuchilla de recubrimiento (recoater).',
     unidad: 'meses', cada_n: 12, accionId: 'cutter',
     fuente: 'Recoater blade SLM dental: anual o por degradación.' },
-  { id: 't-sint-filtre',        aplicaA: [{ tipo: 'sinterizadora' }],
-    nombre: 'Filtro', descripcion: 'Sustitución del filtro principal de gas/proceso.',
-    unidad: 'meses', cada_n: 6, accionId: 'filtre',
-    fuente: 'Filtro proceso SLM: 500-1000h o 6 meses.' },
-  { id: 't-sint-filtre-post',   aplicaA: [{ tipo: 'sinterizadora' }],
-    nombre: 'Filtro posterior', descripcion: 'Sustitución del filtro posterior/HEPA.',
-    unidad: 'meses', cada_n: 12, accionId: 'filtre_posterior',
-    fuente: 'Filtro HEPA cabina: anual.' },
-  { id: 't-sint-piab',          aplicaA: [{ tipo: 'sinterizadora' }],
-    nombre: 'PIAB', descripcion: 'Mantenimiento del sistema de vacío/aspiración PIAB.',
-    unidad: 'meses', cada_n: 3, accionId: 'piab',
-    fuente: 'Aspiradores PIAB industrial: 3-6 meses según uso.' },
   { id: 't-sint-o2',            aplicaA: [{ tipo: 'sinterizadora' }],
     nombre: 'Sensor de oxígeno', descripcion: 'Verificación/sustitución del sensor de oxígeno.',
     unidad: 'meses', cada_n: 12, accionId: 'sensor_oxigen',
@@ -231,6 +239,30 @@ export const PLANTILLAS_PLAN: PlantillaPlan[] = [
     nombre: 'Calibrado', descripcion: 'Calibración del láser y verificación de potencia.',
     unidad: 'meses', cada_n: 6, accionId: 'calibrat',
     fuente: 'Calibración SLM dental: semestral.' },
+
+  // -- Sinterizadoras Cr-Co (TRUMPF / SISMA) ------------------------------------
+  { id: 't-sint-filtre',        aplicaA: [{ tipo: 'sinterizadora', subtipo: 'cr_co' }],
+    nombre: 'Filtro', descripcion: 'Sustitución del filtro principal de gas/proceso.',
+    unidad: 'meses', cada_n: 6, accionId: 'filtre',
+    fuente: 'Filtro proceso SLM: 500-1000h o 6 meses.' },
+  { id: 't-sint-piab',          aplicaA: [{ tipo: 'sinterizadora', subtipo: 'cr_co' }],
+    nombre: 'PIAB', descripcion: 'Mantenimiento del sistema de vacío/aspiración PIAB.',
+    unidad: 'meses', cada_n: 3, accionId: 'piab',
+    fuente: 'Aspiradores PIAB industrial: 3-6 meses según uso.' },
+
+  // -- Sinterizadoras titanio (ZONELAB) ------------------------------------------
+  { id: 't-sint-ti-filtre-1',   aplicaA: [{ tipo: 'sinterizadora', subtipo: 'titanio' }],
+    nombre: 'Filtro 1', descripcion: 'Sustitución del filtro 1 del circuito de gas (Ar).',
+    unidad: 'meses', cada_n: 6, accionId: 'filtre_1',
+    fuente: 'Filtro proceso SLM titanio: 6 meses (ajustar según fabricante).' },
+  { id: 't-sint-ti-filtre-2',   aplicaA: [{ tipo: 'sinterizadora', subtipo: 'titanio' }],
+    nombre: 'Filtro 2', descripcion: 'Sustitución del filtro 2 del circuito de gas (Ar).',
+    unidad: 'meses', cada_n: 6, accionId: 'filtre_2',
+    fuente: 'Filtro proceso SLM titanio: 6 meses (ajustar según fabricante).' },
+  { id: 't-sint-ti-filtre-3',   aplicaA: [{ tipo: 'sinterizadora', subtipo: 'titanio' }],
+    nombre: 'Filtro 3', descripcion: 'Sustitución del filtro 3 del circuito de gas (Ar).',
+    unidad: 'meses', cada_n: 6, accionId: 'filtre_3',
+    fuente: 'Filtro proceso SLM titanio: 6 meses (ajustar según fabricante).' },
 
   // -- Impresoras 3D -----------------------------------------------------------
   { id: 't-imp-calibrat',       aplicaA: [{ tipo: 'impresora_3d' }],
@@ -258,7 +290,12 @@ export function plantillasParaMaquina(
   return PLANTILLAS_PLAN.filter((p) =>
     p.aplicaA.some((a) => {
       if (a.tipo !== tipo) return false
+      // Fresadoras: el subtipo es obligatorio para diferenciar catálogos
       if (tipo === 'fresadora') return a.subtipo === subtipo
+      // Sinterizadoras: las plantillas sin subtipo aplican a todas; las que lo
+      // declaran (cr_co/titanio) solo a su sub-familia. Default cr_co si la
+      // máquina no tiene subtipo (pre-backfill).
+      if (a.subtipo !== undefined) return a.subtipo === (subtipo ?? 'cr_co')
       return true
     }),
   )
