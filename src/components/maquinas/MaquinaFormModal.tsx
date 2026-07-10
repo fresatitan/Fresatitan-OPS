@@ -17,6 +17,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
   const updateMaquina = useWorkflowStore((s) => s.updateMaquina)
 
   const [codigo, setCodigo] = useState('')
+  const [etiqueta, setEtiqueta] = useState('')
   const [nombre, setNombre] = useState('')
   const [tipo, setTipo] = useState<TipoMaquina>('fresadora')
   const [subtipo, setSubtipo] = useState<SubtipoFresadora | null>('seco')
@@ -28,13 +29,14 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
   useEffect(() => {
     if (open) {
       setCodigo(initial?.codigo ?? '')
+      setEtiqueta(initial?.etiqueta ?? '')
       setNombre(initial?.nombre ?? '')
       const t = initial?.tipo ?? 'fresadora'
       setTipo(t)
       setSubtipo(initial?.subtipo ?? (t === 'fresadora' ? 'seco' : null))
-      // Default: sinterizadoras requieren preparación, fresadoras no
+      // Default: sinterizadoras requieren preparación Y lanzamiento; el resto no
       setRequierePreparacion(initial?.requiere_preparacion ?? (t === 'sinterizadora'))
-      setRequiereLanzamiento(initial?.requiere_lanzamiento ?? false)
+      setRequiereLanzamiento(initial?.requiere_lanzamiento ?? (t === 'sinterizadora'))
       setDescripcion(initial?.descripcion ?? '')
       setUbicacion(initial?.ubicacion ?? '')
     }
@@ -46,18 +48,13 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
     if (!initial) {
       setRequierePreparacion(newTipo === 'sinterizadora')
       setSubtipo(newTipo === 'fresadora' ? 'seco' : null)
-      // Lanzamiento por defecto en fresadora METAL
-      setRequiereLanzamiento(false)
+      // Lanzamiento solo en sinterizadoras (acuerdo con cliente, julio 2026)
+      setRequiereLanzamiento(newTipo === 'sinterizadora')
     }
   }
 
   const handleSubtipoChange = (newSubtipo: SubtipoFresadora) => {
     setSubtipo(newSubtipo)
-    // Auto-defaults solo en alta nueva
-    if (!initial) {
-      // METAL → CNC con lanzamiento manual; SECO/HÚMEDO → arranque automático
-      setRequiereLanzamiento(newSubtipo === 'metal')
-    }
   }
 
   const canSubmit = codigo.trim() && nombre.trim()
@@ -66,6 +63,7 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
     if (!canSubmit) return
     const payload = {
       codigo: codigo.trim(),
+      etiqueta: etiqueta.trim() || null,
       nombre: nombre.trim(),
       tipo,
       subtipo: tipo === 'fresadora' ? subtipo : null,
@@ -95,6 +93,18 @@ export default function MaquinaFormModal({ open, onClose, initial }: Props) {
             className="input-field font-mono"
             autoFocus
           />
+        </Field>
+
+        <Field label="Etiqueta de planta">
+          <input
+            value={etiqueta}
+            onChange={(e) => setEtiqueta(e.target.value)}
+            placeholder="F 1 · Zr 2 · SINT 4 · TI 1 · Imp 1…"
+            className="input-field font-mono"
+          />
+          <p className="mt-1 text-[10px] text-text-tertiary">
+            Identificador corto que coincide con el cartel físico de la máquina. Se muestra grande en el panel de planta.
+          </p>
         </Field>
 
         <Field label="Nombre">

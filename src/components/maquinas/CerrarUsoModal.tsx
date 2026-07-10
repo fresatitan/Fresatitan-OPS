@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
@@ -113,7 +114,7 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`${maquina.codigo} · ${maquina.nombre}`} size="lg">
+    <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} />} size="lg">
       <div className="min-h-[360px]">
         {/* Cronómetro destacado — siempre visible */}
         <div className="flex items-center justify-between bg-activa/5 border border-activa/20 rounded-xl px-4 py-3 mb-5">

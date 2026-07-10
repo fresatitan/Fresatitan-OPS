@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useAuthStore } from '../../store/authStore'
 import {
@@ -113,7 +114,7 @@ export default function SubirDocumentoModal({ open, onClose, maquina, averia }: 
   })
 
   return (
-    <Modal open={open} onClose={handleClose} title={`Añadir documentos · ${maquina.codigo}`} size="lg">
+    <Modal open={open} onClose={handleClose} title={<MaquinaModalTitle maquina={maquina} suffix="Añadir documentos" />} size="lg">
       <div className="space-y-4">
         <div className="bg-surface-2 border border-border-subtle rounded-lg p-3 text-xs text-text-secondary">
           <div className="flex items-center gap-2 mb-1">

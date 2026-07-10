@@ -11,6 +11,7 @@ import SeleccionTipoTrabajoModal from '../components/panel/SeleccionTipoTrabajoM
 import StartMantenimientoModal from '../components/panel/StartMantenimientoModal'
 import StartPreparacionModal from '../components/panel/StartPreparacionModal'
 import ThemeToggle from '../components/ui/ThemeToggle'
+import EtiquetaTag from '../components/ui/EtiquetaTag'
 import { TIPOS_MAQUINA, TIPOS_MAQUINA_PLURAL, SUBTIPOS_FRESADORA } from '../constants/estados'
 import type { Maquina, TipoMaquina, UsoEquipo, SubtipoFresadora } from '../types/database'
 
@@ -509,9 +510,14 @@ function PlantMaquinaCard({
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="font-mono text-sm text-primary font-bold">{maquina.codigo}</span>
+      {/* Header: la etiqueta de planta (F 1, SINT 4…) es EL identificador que
+          el trabajador busca — coincide con el cartel físico de la máquina */}
+      <div className="flex items-start justify-between mb-3">
+        {maquina.etiqueta ? (
+          <EtiquetaTag etiqueta={maquina.etiqueta} size="lg" />
+        ) : (
+          <span className="font-mono text-sm text-primary font-bold">{maquina.codigo}</span>
+        )}
         <StatusBadge estado={maquina.estado_actual} />
       </div>
 
@@ -519,6 +525,7 @@ function PlantMaquinaCard({
       <div className="mb-2">
         <h3 className="text-lg font-bold text-text-primary leading-tight">{maquina.nombre}</h3>
         <div className="flex items-center gap-2 mt-1">
+          <span className="font-mono text-xs text-text-tertiary font-bold whitespace-nowrap">{maquina.codigo}</span>
           <span className="text-xs text-text-tertiary uppercase tracking-wider">
             {TIPOS_MAQUINA[maquina.tipo]}
           </span>
@@ -662,9 +669,10 @@ function BlockedMaquinaCard({ maquina, onClick }: { maquina: Maquina; onClick?: 
         </span>
       </div>
 
-      {/* Header: código + nombre */}
+      {/* Header: etiqueta de planta + código + nombre */}
       <div className="mb-3">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1.5">
+          <EtiquetaTag etiqueta={maquina.etiqueta} size="md" />
           <span className="font-mono text-xs text-text-tertiary font-bold">{maquina.codigo}</span>
           <span className="text-[10px] text-text-tertiary uppercase tracking-wider">
             {TIPOS_MAQUINA[maquina.tipo]}

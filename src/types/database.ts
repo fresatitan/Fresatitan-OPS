@@ -54,6 +54,7 @@ export interface Maquina {
   id: string
   codigo: string                    // ej. REF-039
   nombre: string
+  etiqueta: string | null           // identificador corto de planta (F 1, Zr 2, SINT 4, TI 1…) — coincide con el cartel físico de la máquina
   tipo: TipoMaquina
   subtipo: SubtipoFresadora | null  // sólo aplica a fresadoras (metal/seco/humedo)
   numero_serie: string | null

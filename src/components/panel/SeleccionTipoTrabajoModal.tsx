@@ -1,4 +1,5 @@
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import type { Maquina } from '../../types/database'
 
 interface Props {
@@ -41,7 +42,7 @@ export default function SeleccionTipoTrabajoModal({
   const mostrarPreparacion = maquina.requiere_preparacion
 
   return (
-    <Modal open={open} onClose={onClose} title={`${maquina.codigo} · ${maquina.nombre}`} size="lg">
+    <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} />} size="lg">
       <div className="min-h-[280px]">
         <h3 className="text-xl font-bold text-text-primary mb-1">
           ¿Qué vas a hacer?

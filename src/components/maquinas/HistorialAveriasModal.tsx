@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import SubirDocumentoModal from './SubirDocumentoModal'
 import AveriaTimeline from './AveriaTimeline'
 import { useWorkflowStore } from '../../store/workflowStore'
@@ -80,7 +81,7 @@ export default function HistorialAveriasModal({ open, onClose, maquina }: Props)
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`Historial de averías · ${maquina.codigo}`} size="xl">
+    <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} suffix="Historial de averías" />} size="xl">
       <div className="space-y-4">
         {/* Cabecera con stats + export */}
         <div className="flex items-start justify-between gap-4 flex-wrap">

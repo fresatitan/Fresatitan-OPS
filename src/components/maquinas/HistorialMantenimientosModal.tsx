@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore } from '../../store/trabajadoresStore'
 import { TIPOS_MANTENIMIENTO } from '../../constants/estados'
@@ -48,7 +49,7 @@ export default function HistorialMantenimientosModal({ open, onClose, maquina }:
   }, [ultimo])
 
   return (
-    <Modal open={open} onClose={onClose} title={`Mantenimientos · ${maquina.codigo}`} size="lg">
+    <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} suffix="Mantenimientos" />} size="lg">
       <div className="space-y-4">
         {/* Resumen rápido — último mantenimiento destacado */}
         <div className="rounded-xl border-2 border-mantenimiento/30 bg-mantenimiento/5 p-4">

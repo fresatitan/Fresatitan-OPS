@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
@@ -56,7 +57,7 @@ export default function FinalizarMantenimientoModal({ open, onClose, maquina }: 
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`Finalizar mantenimiento · ${maquina.codigo}`} size="lg">
+    <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} suffix="Finalizar mantenimiento" />} size="lg">
       <div className="space-y-5">
         {/* Resumen del mantenimiento abierto */}
         {mantenimientoAbierto ? (

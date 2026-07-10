@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Badge from '../ui/Badge'
+import EtiquetaTag from '../ui/EtiquetaTag'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore } from '../../store/trabajadoresStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
@@ -83,6 +84,7 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit, onPlanes
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 mb-0.5">
+                <EtiquetaTag etiqueta={maquina.etiqueta} size="sm" />
                 <span className="font-mono text-[11px] text-primary font-bold">{maquina.codigo}</span>
                 <span className="text-[10px] font-mono uppercase tracking-wider text-text-tertiary">
                   {maquina.tipo === 'impresora_3d' ? 'Impresora 3D' : maquina.tipo}

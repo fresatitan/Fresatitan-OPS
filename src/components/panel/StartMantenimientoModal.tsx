@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
@@ -185,7 +186,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
   const showBack = step !== 'tecnico'
 
   return (
-    <Modal open={open} onClose={onClose} title={`${maquina.codigo} · Mantenimiento`} size="lg">
+    <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} suffix="Mantenimiento" />} size="lg">
       <div className="min-h-[360px]">
         {/* Step indicator */}
         <StepIndicator current={step} />

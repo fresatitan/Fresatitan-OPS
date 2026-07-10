@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useAuthStore } from '../../store/authStore'
 import {
@@ -134,7 +135,7 @@ export default function ResolverAveriaModal({ open, onClose, maquina }: Props) {
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title={`Resolver avería · ${maquina.codigo}`} size="lg">
+    <Modal open={open} onClose={handleClose} title={<MaquinaModalTitle maquina={maquina} suffix="Resolver avería" />} size="lg">
       <div className="space-y-5">
         <div className="bg-averia/5 border border-averia/20 rounded-lg p-3 text-[11px] text-text-secondary leading-relaxed">
           Completa los datos de la resolución. <strong>Sólo es obligatoria la

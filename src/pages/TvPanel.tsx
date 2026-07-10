@@ -483,18 +483,38 @@ function Fila({ maquina, uso }: { maquina: Maquina; uso: UsoEquipo | null }) {
         borderLeft: `8px solid ${estado.barColor}`,
       }}
     >
-      {/* Código */}
-      <div
-        style={{
-          fontFamily: 'DM Mono, monospace',
-          fontSize: 22,
-          fontWeight: 800,
-          color: '#D09A40',
-          letterSpacing: '0.02em',
-        }}
-      >
-        {maquina.codigo}
-      </div>
+      {/* Etiqueta de planta (F 1, SINT 4…) — coincide con el cartel físico.
+          Fallback al código REF si la máquina aún no tiene etiqueta. */}
+      {maquina.etiqueta ? (
+        <div
+          style={{
+            fontFamily: 'DM Mono, monospace',
+            fontSize: 22,
+            fontWeight: 800,
+            backgroundColor: '#D09A40',
+            color: '#0A0A0A',
+            borderRadius: 8,
+            padding: '4px 12px',
+            letterSpacing: '0.02em',
+            whiteSpace: 'nowrap',
+            justifySelf: 'start',
+          }}
+        >
+          {maquina.etiqueta}
+        </div>
+      ) : (
+        <div
+          style={{
+            fontFamily: 'DM Mono, monospace',
+            fontSize: 22,
+            fontWeight: 800,
+            color: '#D09A40',
+            letterSpacing: '0.02em',
+          }}
+        >
+          {maquina.codigo}
+        </div>
+      )}
 
       {/* Nombre */}
       <div

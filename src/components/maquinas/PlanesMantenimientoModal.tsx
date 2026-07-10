@@ -1,4 +1,5 @@
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import PlanesMantenimientoSection from './PlanesMantenimientoSection'
 import type { Maquina } from '../../types/database'
 
@@ -18,7 +19,7 @@ export default function PlanesMantenimientoModal({ open, onClose, maquina }: Pro
     <Modal
       open={open}
       onClose={onClose}
-      title={`Planes de revisión · ${maquina.codigo}`}
+      title={<MaquinaModalTitle maquina={maquina} suffix="Planes de revisión" />}
       size="lg"
     >
       <div className="space-y-4">

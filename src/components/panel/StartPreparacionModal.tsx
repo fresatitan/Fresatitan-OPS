@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
@@ -58,7 +59,7 @@ export default function StartPreparacionModal({ open, onClose, maquina }: Props)
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`Preparación · ${maquina.codigo}`} size="lg">
+    <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} suffix="Preparación" />} size="lg">
       <div className="min-h-[360px]">
         <h3 className="text-xl font-bold text-text-primary mb-1">
           ¿Quién prepara la máquina?

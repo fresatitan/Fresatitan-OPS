@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
+import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
@@ -139,7 +140,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`${maquina.codigo} · ${maquina.nombre}`} size="lg">
+    <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} />} size="lg">
       <div className="min-h-[360px]">
         {/* Link escape: reportar avería en cualquier momento (salvo si ya estás en averia) */}
         {step !== 'averia' && (
