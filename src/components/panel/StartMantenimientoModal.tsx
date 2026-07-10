@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Modal from '../ui/Modal'
 import { MaquinaModalTitle } from '../ui/EtiquetaTag'
+import { IconWrench, IconHistory } from '../ui/icons'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
@@ -219,7 +220,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
                     key={t.value}
                     onClick={() => handleSelectTipo(t.value)}
                     className={`
-                      flex items-center gap-4 p-5 rounded-xl border-2 text-left transition-all
+                      flex items-center gap-4 p-5 rounded-xl border text-left transition-all
                       active:scale-[0.97]
                       ${isSelected
                         ? 'bg-mantenimiento/10 border-mantenimiento'
@@ -279,7 +280,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
                       onClick={() => toggleAccion(a.id)}
                       className={`
                         relative flex flex-col justify-between gap-2
-                        min-h-[78px] px-3 py-2.5 rounded-lg border-2 text-left
+                        min-h-[78px] px-3 py-2.5 rounded-lg border text-left
                         transition-all active:scale-[0.97]
                         ${isSel
                           ? 'bg-mantenimiento/15 border-mantenimiento text-mantenimiento'
@@ -325,7 +326,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
                           key={n}
                           onClick={() => toggleEina(n)}
                           className={`
-                            aspect-square rounded-md border-2 text-sm font-mono font-bold
+                            aspect-square rounded-md border text-sm font-mono font-bold
                             transition-all active:scale-[0.95]
                             ${isSel
                               ? 'bg-mantenimiento text-white border-mantenimiento'
@@ -361,7 +362,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
               <button
                 onClick={() => setStep('confirmar')}
                 disabled={!puedeAvanzar}
-                className="w-full py-5 rounded-xl text-lg font-bold bg-mantenimiento text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-mantenimiento/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-touch bg-mantenimiento text-white"
               >
                 Continuar
               </button>
@@ -378,7 +379,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
             <div className="bg-surface-3 border border-border-subtle rounded-xl p-4 space-y-3">
               {tecnico && (
                 <div className="flex items-center gap-3">
-                  <span className="text-xl w-8 text-center">🔧</span>
+                  <span className="w-8 flex items-center justify-center text-text-tertiary"><IconWrench size={16} /></span>
                   <span className="text-xs text-text-tertiary uppercase tracking-wider w-20">Técnico</span>
                   <div className="flex items-center gap-2 flex-1">
                     <TrabajadorAvatar trabajador={tecnico} size="sm" />
@@ -387,7 +388,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
                 </div>
               )}
               <div className="flex items-center gap-3">
-                <span className="text-xl w-8 text-center">📋</span>
+                <span className="w-8 flex items-center justify-center text-text-tertiary"><IconHistory size={16} /></span>
                 <span className="text-xs text-text-tertiary uppercase tracking-wider w-20">Tipo</span>
                 <span className="text-base font-semibold text-text-primary capitalize">{tipo}</span>
               </div>
@@ -401,7 +402,7 @@ export default function StartMantenimientoModal({ open, onClose, maquina }: Prop
             <button
               onClick={handleConfirmar}
               disabled={submitting}
-              className="w-full mt-6 py-5 rounded-xl text-lg font-bold bg-mantenimiento text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-mantenimiento/20 disabled:opacity-50 disabled:cursor-wait"
+              className="btn-touch bg-mantenimiento text-white mt-6"
             >
               {submitting ? 'Guardando...' : 'Registrar mantenimiento'}
             </button>
@@ -494,7 +495,7 @@ function TrabajadorGrid({
             key={t.id}
             onClick={() => onSelect(t)}
             className={`
-              flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all
+              flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
               active:scale-[0.96]
               ${isSelected
                 ? 'bg-mantenimiento/10 border-mantenimiento'

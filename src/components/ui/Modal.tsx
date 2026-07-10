@@ -34,15 +34,19 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(24,20,12,0.45)] backdrop-blur-[2px] animate-fade-in"
       onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
-      <div className={`bg-surface-2 border border-border-default rounded-lg w-full ${SIZE_CLASSES[size]} animate-slide-in overflow-hidden max-h-[90vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
-          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+      <div
+        className={`bg-surface-2 border border-border-subtle rounded-xl w-full ${SIZE_CLASSES[size]} animate-slide-in overflow-hidden max-h-[90vh] overflow-y-auto`}
+        style={{ boxShadow: 'var(--shadow-modal)' }}
+      >
+        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border-subtle">
+          <h3 className="text-sm text-text-primary min-w-0">{title}</h3>
           <button
             onClick={onClose}
-            className="text-text-tertiary hover:text-text-primary transition-colors text-lg leading-none"
+            aria-label="Cerrar"
+            className="shrink-0 w-8 h-8 -mr-1.5 rounded-lg flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-surface-3 transition-colors text-xl leading-none"
           >
             ×
           </button>

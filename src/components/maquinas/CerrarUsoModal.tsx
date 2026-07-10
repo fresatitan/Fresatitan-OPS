@@ -122,7 +122,7 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
     <Modal open={open} onClose={onClose} title={<MaquinaModalTitle maquina={maquina} />} size="lg">
       <div className="min-h-[360px]">
         {/* Cronómetro destacado — siempre visible */}
-        <div className="flex items-center justify-between bg-activa/5 border border-activa/20 rounded-xl px-4 py-3 mb-5">
+        <div className="flex items-center justify-between bg-activa-muted rounded-lg px-4 py-3 mb-5">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-wider text-activa">En uso desde</div>
             <div className="text-sm text-text-secondary mt-0.5">
@@ -178,30 +178,30 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
               <button
                 onClick={() => handleResultado('ok')}
                 disabled={submitting}
-                className="flex flex-col items-center justify-center gap-3 py-8 rounded-2xl border-2 border-activa/30 bg-activa/5 hover:bg-activa/10 hover:border-activa active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-wait"
+                className="flex flex-col items-center justify-center gap-3 py-8 rounded-xl border border-border-subtle bg-surface-2 shadow-card hover:shadow-card-hover hover:border-activa/50 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-wait"
               >
-                <div className="w-16 h-16 rounded-full bg-activa/20 flex items-center justify-center">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <div className="w-14 h-14 rounded-full bg-activa-muted text-activa flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-activa">Todo bien</span>
-                <span className="text-xs text-text-tertiary">Cerrar sin incidencias</span>
+                <span className="text-[17px] font-bold text-activa tracking-tight">Todo bien</span>
+                <span className="text-[11.5px] text-text-tertiary">Cerrar sin incidencias</span>
               </button>
 
               <button
                 onClick={() => handleResultado('ko')}
-                className="flex flex-col items-center justify-center gap-3 py-8 rounded-2xl border-2 border-averia/30 bg-averia/5 hover:bg-averia/10 hover:border-averia active:scale-[0.97] transition-all"
+                className="flex flex-col items-center justify-center gap-3 py-8 rounded-xl border border-border-subtle bg-surface-2 shadow-card hover:shadow-card-hover hover:border-averia/50 active:scale-[0.98] transition-all"
               >
-                <div className="w-16 h-16 rounded-full bg-averia/20 flex items-center justify-center">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <div className="w-14 h-14 rounded-full bg-averia-muted text-averia flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="8" x2="12" y2="13" />
                     <line x1="12" y1="17" x2="12.01" y2="17" />
                     <circle cx="12" cy="12" r="10" />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-averia">Hubo un problema</span>
-                <span className="text-xs text-text-tertiary">Contar qué pasó</span>
+                <span className="text-[17px] font-bold text-averia tracking-tight">Hubo un problema</span>
+                <span className="text-[11.5px] text-text-tertiary">Contar qué pasó</span>
               </button>
             </div>
           </StepContent>
@@ -227,11 +227,11 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
                         key={t}
                         onClick={() => setTipoIncidencia(t)}
                         className={`
-                          px-4 py-3 rounded-xl border-2 text-left text-sm font-medium transition-all
-                          active:scale-[0.98]
+                          px-4 py-3 rounded-lg border text-left text-sm font-medium transition-all
+                          active:scale-[0.99]
                           ${isSelected
-                            ? 'bg-averia/10 border-averia text-averia'
-                            : 'bg-surface-2 border-border-subtle text-text-primary hover:border-averia/40 hover:bg-surface-3'
+                            ? 'bg-averia-muted border-averia text-averia ring-1 ring-averia'
+                            : 'bg-surface-2 border-border-subtle shadow-card text-text-primary hover:border-border-default'
                           }
                         `}
                       >
@@ -274,7 +274,7 @@ export default function CerrarUsoModal({ open, onClose, maquina, uso }: Props) {
               <button
                 onClick={handleGuardarProblema}
                 disabled={submitting || !puedeGuardarProblema}
-                className="w-full py-5 rounded-xl text-lg font-bold bg-averia text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-averia/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-touch btn-touch-danger"
               >
                 {submitting ? 'Guardando...' : 'Guardar y cerrar'}
               </button>
@@ -363,16 +363,16 @@ function TrabajadorGrid({
             key={t.id}
             onClick={() => onSelect(t)}
             className={`
-              flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all
-              active:scale-[0.96]
+              flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
+              active:scale-[0.97]
               ${isSelected
-                ? 'bg-primary-muted border-primary'
-                : 'bg-surface-2 border-border-subtle hover:border-primary/40 hover:bg-surface-3'
+                ? 'bg-primary-muted border-primary ring-1 ring-primary'
+                : 'bg-surface-2 border-border-subtle shadow-card hover:border-border-default'
               }
             `}
           >
             <TrabajadorAvatar trabajador={t} size="lg" selected={isSelected} />
-            <span className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
+            <span className={`text-[15px] font-semibold ${isSelected ? 'text-primary-ink' : 'text-text-primary'}`}>
               {t.nombre}
             </span>
           </button>

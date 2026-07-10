@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
 import { MaquinaModalTitle } from '../ui/EtiquetaTag'
+import { IconAlert, IconUser, IconPlay, IconClock } from '../ui/icons'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore, type Trabajador } from '../../store/trabajadoresStore'
@@ -147,10 +148,10 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
           <div className="flex justify-end mb-2">
             <button
               onClick={() => setStep('averia')}
-              className="text-[11px] text-averia hover:text-averia/80 transition-colors flex items-center gap-1"
+              className="text-[12px] font-medium text-averia hover:opacity-80 transition-opacity flex items-center gap-1.5"
             >
-              <span>⚠</span>
-              <span className="underline decoration-dotted">Reportar avería en esta máquina</span>
+              <IconAlert size={14} />
+              Reportar avería en esta máquina
             </button>
           </div>
         )}
@@ -166,7 +167,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
         {/* Modo Avería */}
         {step === 'averia' && (
           <StepContent
-            title="⚠ Reportar avería"
+            title="Reportar avería"
             subtitle="Describe qué ocurre y propón la gravedad. La máquina sigue operativa — el admin decidirá si bloquearla o no."
           >
             <div className="space-y-4">
@@ -196,8 +197,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
                 </label>
 
                 {/* Cuadro informativo: deja claro que es solo una propuesta y qué efecto tiene */}
-                <div className="mb-3 rounded-lg border border-border-subtle bg-surface-3 px-3 py-2 text-xs text-text-secondary leading-relaxed">
-                  <span className="mr-1">💡</span>
+                <div className="mb-3 rounded-lg bg-surface-3 px-3 py-2 text-xs text-text-secondary leading-relaxed">
                   Esto es <strong className="text-text-primary">tu propuesta</strong>. La máquina seguirá
                   operativa hasta que el admin revise el aviso. Solo se bloqueará si el admin confirma
                   como <strong className="text-averia">Crítica</strong>.
@@ -237,7 +237,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
               <button
                 onClick={handleReportarAveria}
                 disabled={!averiaMotivo.trim() || !averiaTecnico}
-                className="w-full py-5 rounded-xl text-lg font-bold bg-averia text-white hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-averia/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-touch btn-touch-danger"
               >
                 Enviar aviso al admin
               </button>
@@ -287,15 +287,15 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
                     onClick={() => handleSelectProceso(p)}
                     className={`
                       flex flex-col items-center justify-center gap-2 p-4 min-h-[100px]
-                      rounded-xl border-2 transition-all active:scale-[0.96]
+                      rounded-xl border transition-all active:scale-[0.97]
                       ${isSelected
-                        ? 'bg-primary-muted border-primary'
-                        : 'bg-surface-2 border-border-subtle hover:border-primary/40 hover:bg-surface-3'
+                        ? 'bg-primary-muted border-primary ring-1 ring-primary'
+                        : 'bg-surface-2 border-border-subtle shadow-card hover:border-border-default'
                       }
                     `}
                   >
-                    <span className="text-3xl text-primary">{meta.icon}</span>
-                    <span className={`text-sm font-semibold text-center ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
+                    <span className="text-2xl text-primary-ink">{meta.icon}</span>
+                    <span className={`text-sm font-semibold text-center ${isSelected ? 'text-primary-ink' : 'text-text-primary'}`}>
                       {meta.label}
                     </span>
                   </button>
@@ -312,12 +312,12 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
             subtitle="Revisa que todo esté bien y pulsa el botón para poner la máquina en marcha."
           >
             <div className="bg-surface-3 border border-border-subtle rounded-xl p-4 space-y-3">
-              <SummaryRow icon="👤" label="Técnico" trabajador={tecnico} />
+              <SummaryRow icon={<IconUser size={17} />} label="Técnico" trabajador={tecnico} />
               {maquina.requiere_lanzamiento && tecnicoLanz && (
-                <SummaryRow icon="▶" label="Lanza" trabajador={tecnicoLanz} />
+                <SummaryRow icon={<IconPlay size={15} />} label="Lanza" trabajador={tecnicoLanz} />
               )}
-              <SummaryRow icon={TIPOS_PROCESO[tipoProceso].icon} label="Proceso" value={TIPOS_PROCESO[tipoProceso].label} />
-              <SummaryRow icon="🕐" label="Hora" value={hora} />
+              <SummaryRow icon={<span className="text-[15px] leading-none">{TIPOS_PROCESO[tipoProceso].icon}</span>} label="Proceso" value={TIPOS_PROCESO[tipoProceso].label} />
+              <SummaryRow icon={<IconClock size={16} />} label="Hora" value={hora} />
             </div>
 
             {!showAjustes ? (
@@ -365,7 +365,7 @@ export default function NuevoUsoModal({ open, onClose, maquina }: Props) {
             <button
               onClick={handleConfirmar}
               disabled={submitting}
-              className="w-full mt-6 py-5 rounded-xl text-lg font-bold bg-primary text-text-inverse hover:bg-primary-light active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-wait"
+              className="btn-touch btn-touch-primary mt-6"
             >
               {submitting ? 'Guardando...' : 'Empezar ahora'}
             </button>
@@ -462,16 +462,16 @@ function TrabajadorGrid({
             key={t.id}
             onClick={() => onSelect(t)}
             className={`
-              flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all
-              active:scale-[0.96]
+              flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
+              active:scale-[0.97]
               ${isSelected
-                ? 'bg-primary-muted border-primary'
-                : 'bg-surface-2 border-border-subtle hover:border-primary/40 hover:bg-surface-3'
+                ? 'bg-primary-muted border-primary ring-1 ring-primary'
+                : 'bg-surface-2 border-border-subtle shadow-card hover:border-border-default'
               }
             `}
           >
             <TrabajadorAvatar trabajador={t} size="lg" selected={isSelected} />
-            <span className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
+            <span className={`text-base font-semibold ${isSelected ? 'text-primary-ink' : 'text-text-primary'}`}>
               {t.nombre}
             </span>
           </button>
@@ -507,7 +507,7 @@ function SeveridadOption({
     <button
       onClick={onClick}
       className={`
-        flex flex-col items-start gap-1 p-4 rounded-xl border-2 text-left transition-all
+        flex flex-col items-start gap-1 p-4 rounded-xl border text-left transition-all
         active:scale-[0.98]
         ${active
           ? `${palette.bg} ${palette.border}`
@@ -534,14 +534,14 @@ function SummaryRow({
   trabajador,
   value,
 }: {
-  icon: string
+  icon: React.ReactNode
   label: string
   trabajador?: Trabajador
   value?: string
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xl w-8 text-center">{icon}</span>
+      <span className="w-8 flex items-center justify-center text-text-tertiary">{icon}</span>
       <span className="text-xs text-text-tertiary uppercase tracking-wider w-20">{label}</span>
       {trabajador ? (
         <div className="flex items-center gap-2 flex-1">

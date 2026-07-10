@@ -61,7 +61,7 @@ export default function FinalizarMantenimientoModal({ open, onClose, maquina }: 
       <div className="space-y-5">
         {/* Resumen del mantenimiento abierto */}
         {mantenimientoAbierto ? (
-          <div className="rounded-xl border-2 border-mantenimiento/30 bg-mantenimiento/5 p-4">
+          <div className="rounded-xl bg-mantenimiento-muted p-4">
             <div className="text-[10px] font-mono uppercase tracking-widest text-mantenimiento mb-2">
               Mantenimiento abierto
             </div>
@@ -117,7 +117,7 @@ export default function FinalizarMantenimientoModal({ open, onClose, maquina }: 
                   key={t.id}
                   onClick={() => setVerificador(isSelected ? null : t)}
                   className={`
-                    flex flex-col items-center gap-1.5 p-2.5 rounded-lg border-2 transition-all
+                    flex flex-col items-center gap-1.5 p-2.5 rounded-lg border transition-all
                     active:scale-[0.96]
                     ${isSelected
                       ? 'bg-mantenimiento/10 border-mantenimiento'

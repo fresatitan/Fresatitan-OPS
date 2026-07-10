@@ -77,7 +77,7 @@ export default function StartPreparacionModal({ open, onClose, maquina }: Props)
                 key={t.id}
                 onClick={() => setTecnico(t)}
                 className={`
-                  flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all
+                  flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                   active:scale-[0.96]
                   ${isSelected
                     ? 'bg-activa/10 border-activa'
@@ -112,10 +112,7 @@ export default function StartPreparacionModal({ open, onClose, maquina }: Props)
         <button
           onClick={handleSubmit}
           disabled={submitting || !tecnico}
-          className="
-            w-full py-5 rounded-xl text-lg font-bold bg-activa text-white
-            hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-activa/20
-            disabled:opacity-40 disabled:cursor-not-allowed
+          className="btn-touch bg-activa text-white disabled:opacity-40 disabled:cursor-not-allowed
           "
         >
           {submitting ? 'Guardando…' : 'Registrar preparación'}

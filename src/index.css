@@ -7,6 +7,9 @@
   --color-primary-dark: #A87B2E;
   --color-primary-muted: rgba(208, 154, 64, 0.15);
   --color-primary-glow: rgba(208, 154, 64, 0.08);
+  /* Dorado como TINTA (texto/iconos): en oscuro el dorado de marca ya
+     contrasta; en claro se sobreescribe por un bronce legible (WCAG AA). */
+  --color-primary-ink: #D09A40;
 
   /* === DARK MODE (default) === */
   /* Surface system */
@@ -45,43 +48,61 @@
   --color-inactiva: #6B7280;
   --color-inactiva-muted: rgba(107, 114, 128, 0.15);
 
-  /* Fonts */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Fonts — Archivo: grotesk de señalética industrial, sustituye a Inter */
+  --font-sans: 'Archivo', 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'DM Mono', 'SF Mono', 'Fira Code', monospace;
+
+  /* Sombras de elevación (cálidas, casi imperceptibles — nada de glows) */
+  --shadow-card: 0 1px 2px rgba(43, 37, 24, 0.05), 0 2px 8px rgba(43, 37, 24, 0.04);
+  --shadow-card-hover: 0 2px 4px rgba(43, 37, 24, 0.07), 0 6px 16px rgba(43, 37, 24, 0.06);
+  --shadow-modal: 0 8px 24px rgba(43, 37, 24, 0.14), 0 2px 6px rgba(43, 37, 24, 0.08);
 }
 
-/* === LIGHT MODE — overrides === */
+/* === LIGHT MODE — overrides ===
+ * Paleta "clínico-técnica": blancos cálidos (no grises fríos de sistema),
+ * tinta casi-negra con matiz cálido, y estados desaturados para que el
+ * dorado de marca sea el único color que grita. Rediseño julio 2026.
+ */
 [data-theme='light'] {
-  /* Surfaces invertidas (claras, con escala muy sutil para profundidad) */
+  /* Surfaces: la página es hueso cálido; las cards, blanco puro */
   --color-surface-0: #FFFFFF;
-  --color-surface-1: #F7F7F8;
-  --color-surface-2: #F0F1F2;
-  --color-surface-3: #E7E8EA;
-  --color-surface-4: #D8DADD;
+  --color-surface-1: #F6F5F1;
+  --color-surface-2: #FFFFFF;
+  --color-surface-3: #F1EFEA;
+  --color-surface-4: #E5E3DC;
 
-  /* Borders oscuros con alpha sobre fondo claro */
-  --color-border-subtle: rgba(0, 0, 0, 0.08);
-  --color-border-default: rgba(0, 0, 0, 0.14);
-  --color-border-strong: rgba(0, 0, 0, 0.22);
+  /* Borders cálidos (tinta con alpha, no negro puro) */
+  --color-border-subtle: rgba(43, 37, 24, 0.10);
+  --color-border-default: rgba(43, 37, 24, 0.16);
+  --color-border-strong: rgba(43, 37, 24, 0.26);
 
-  /* Text invertido — oscuros sobre fondos claros, asegurando contraste WCAG */
-  --color-text-primary: #0F0F10;
-  --color-text-secondary: #4B4B4D;
-  --color-text-tertiary: #7A7A7C;
+  /* Text: tinta cálida, tres niveles bien separados */
+  --color-text-primary: #211E17;
+  --color-text-secondary: #5D584C;
+  --color-text-tertiary: #8F8A7C;
   /* text-inverse permanece oscuro: se usa sobre el dorado, donde texto oscuro
      funciona bien en ambos modos. */
 
-  /* Overlays con alfa oscura */
-  --color-overlay-low: rgba(0, 0, 0, 0.04);
-  --color-overlay-mid: rgba(0, 0, 0, 0.08);
-  --color-overlay-high: rgba(0, 0, 0, 0.18);
+  /* Dorado como tinta: bronce con contraste AA sobre blanco */
+  --color-primary-ink: #8A6520;
+  --color-primary-muted: rgba(208, 154, 64, 0.14);
 
-  /* Estados — ligeramente más opacos para mantener visibilidad sobre fondos claros */
-  --color-activa-muted: rgba(34, 197, 94, 0.18);
-  --color-parada-muted: rgba(245, 158, 11, 0.18);
-  --color-averia-muted: rgba(239, 68, 68, 0.16);
-  --color-mantenimiento-muted: rgba(59, 130, 246, 0.16);
-  --color-inactiva-muted: rgba(107, 114, 128, 0.18);
+  /* Overlays con alfa cálida */
+  --color-overlay-low: rgba(43, 37, 24, 0.04);
+  --color-overlay-mid: rgba(43, 37, 24, 0.09);
+  --color-overlay-high: rgba(43, 37, 24, 0.18);
+
+  /* Estados recalibrados para fondo claro: mismos matices, menos neón */
+  --color-activa: #178A4C;
+  --color-activa-muted: rgba(23, 138, 76, 0.12);
+  --color-parada: #A16E0C;
+  --color-parada-muted: rgba(161, 110, 12, 0.12);
+  --color-averia: #C93A2E;
+  --color-averia-muted: rgba(201, 58, 46, 0.10);
+  --color-mantenimiento: #2563C4;
+  --color-mantenimiento-muted: rgba(37, 99, 196, 0.10);
+  --color-inactiva: #8B8778;
+  --color-inactiva-muted: rgba(139, 135, 120, 0.14);
 }
 
 /* === Base === */
@@ -230,6 +251,46 @@ body {
 .animate-fade-in {
   animation: fade-in 0.15s ease-out;
 }
+
+/* === Botones táctiles unificados (rediseño panel, julio 2026) ===
+ * Un solo lenguaje: primario dorado sólido, peligro rojo sólido,
+ * secundario contorno. Sin sombras de color, sin gradientes.
+ */
+.btn-touch {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.125rem 1.5rem;
+  border-radius: 0.625rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: background-color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+.btn-touch:active { transform: scale(0.985); }
+.btn-touch:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-touch:disabled:active { transform: none; }
+
+.btn-touch-primary {
+  background-color: var(--color-primary);
+  color: #1F1608;
+}
+.btn-touch-primary:not(:disabled):hover { background-color: var(--color-primary-light); }
+
+.btn-touch-danger {
+  background-color: var(--color-averia);
+  color: #FFFFFF;
+}
+.btn-touch-danger:not(:disabled):hover { opacity: 0.92; }
+
+/* Punto de estado con pulso sereno — sustituye a los "ping" por todas partes */
+@keyframes dot-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.dot-breathe { animation: dot-breathe 2.4s ease-in-out infinite; }
 
 /*
  * TV PANEL — auto-scroll vertical infinito tipo aeropuerto.
