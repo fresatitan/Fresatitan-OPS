@@ -308,10 +308,13 @@ function RelojGigante() {
     return () => clearInterval(id)
   }, [])
   const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-  const fecha = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+  const fechaRaw = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+  // Solo la primera letra en mayúscula ("Sábado, 11 de julio") — un
+  // text-transform: capitalize pondría "De Julio".
+  const fecha = fechaRaw.charAt(0).toUpperCase() + fechaRaw.slice(1)
   return (
     <div style={{ textAlign: 'right', minWidth: 200 }}>
-      <div style={{ fontSize: 12, color: '#888', textTransform: 'capitalize' }}>{fecha}</div>
+      <div style={{ fontSize: 12, color: '#888' }}>{fecha}</div>
       <div
         style={{
           fontSize: 44,

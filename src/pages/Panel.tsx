@@ -134,12 +134,12 @@ export default function Panel() {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right leading-none">
-            <div className="text-xs text-text-secondary first-letter:uppercase">
+            <div className="hidden sm:block text-xs text-text-secondary first-letter:uppercase">
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
             </div>
             <LiveClock />
           </div>
-          <div className="w-px h-8 bg-border-subtle" />
+          <div className="w-px h-8 bg-border-subtle hidden sm:block" />
           <ThemeToggle variant="panel" />
         </div>
       </header>
