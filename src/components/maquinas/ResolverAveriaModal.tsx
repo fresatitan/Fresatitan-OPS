@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import Modal from '../ui/Modal'
+import { todayLocalDate } from '../../lib/utils'
 import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useAuthStore } from '../../store/authStore'
@@ -37,7 +38,7 @@ export default function ResolverAveriaModal({ open, onClose, maquina }: Props) {
 
   const [descripcion, setDescripcion] = useState('')
   const [tecnico, setTecnico] = useState('')
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10))
+  const [fecha, setFecha] = useState(() => todayLocalDate())
   const [archivos, setArchivos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -78,7 +79,7 @@ export default function ResolverAveriaModal({ open, onClose, maquina }: Props) {
   const reset = () => {
     setDescripcion('')
     setTecnico('')
-    setFecha(new Date().toISOString().slice(0, 10))
+    setFecha(todayLocalDate())
     setArchivos([])
     setSubmitting(false)
   }

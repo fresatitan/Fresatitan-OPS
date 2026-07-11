@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { toValidUuid } from '../lib/utils'
+import { toValidUuid, todayLocalDate } from '../lib/utils'
 import { useAuthStore } from './authStore'
 import type {
   Maquina,
@@ -69,7 +69,7 @@ const SEED_MAQUINAS: Maquina[] = [
 // -----------------------------------------------------------------------------
 // Helpers de fecha/hora
 // -----------------------------------------------------------------------------
-const todayDate = () => new Date().toISOString().slice(0, 10)
+const todayDate = todayLocalDate
 /**
  * Devuelve la hora local actual con precisión de segundos (HH:MM:SS).
  * Importante: el cronómetro de un uso depende de la diferencia entre

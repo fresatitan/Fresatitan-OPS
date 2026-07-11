@@ -4,7 +4,7 @@ import Layout from '../components/ui/Layout'
 import TopBar from '../components/ui/TopBar'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useTrabajadoresStore } from '../store/trabajadoresStore'
-import { formatTime, preparacionPreviaDe } from '../lib/utils'
+import { formatTime, preparacionPreviaDe, todayLocalDate, toLocalDateString } from '../lib/utils'
 import { TIPOS_PROCESO } from '../constants/estados'
 import { exportPdfTablaPorMaquina, exportPdfResumenEjecutivo } from '../lib/pdfExport'
 import type { UsoEquipo, Maquina, Preparacion } from '../types/database'
@@ -33,9 +33,9 @@ export default function Informes() {
   const [desde, setDesde] = useState<string>(() => {
     const d = new Date()
     d.setDate(1) // inicio del mes
-    return d.toISOString().slice(0, 10)
+    return toLocalDateString(d)
   })
-  const [hasta, setHasta] = useState<string>(() => new Date().toISOString().slice(0, 10))
+  const [hasta, setHasta] = useState<string>(() => todayLocalDate())
 
   const maquinasOrdenadas = useMemo(
     () => [...maquinas].sort((a, b) => a.codigo.localeCompare(b.codigo)),

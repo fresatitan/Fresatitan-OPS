@@ -11,7 +11,7 @@ import type {
   Preparacion,
   TipoProceso,
 } from '../types/database'
-import { formatTime, preparacionPreviaDe } from './utils'
+import { formatTime, preparacionPreviaDe, todayLocalDate } from './utils'
 
 const TIPO_LABEL_UPPER: Record<TipoMaquina, string> = {
   fresadora: 'FRESADORA',
@@ -723,7 +723,7 @@ export function exportHistorialAveriasPdf({
     )
   }
 
-  const filename = `${maquina.codigo}_historial_averias_${new Date().toISOString().slice(0, 10)}.pdf`
+  const filename = `${maquina.codigo}_historial_averias_${todayLocalDate()}.pdf`
   doc.save(filename)
   return filename
 }

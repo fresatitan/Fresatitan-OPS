@@ -12,6 +12,22 @@ export function toIsoDateTime(fecha: string, hora: string): string {
 }
 
 /**
+ * Fecha de HOY en horario LOCAL, formato YYYY-MM-DD.
+ *
+ * ⚠ No usar `new Date().toISOString().slice(0, 10)`: toISOString devuelve la
+ * fecha UTC, que entre las 00:00 y las 02:00 (horario peninsular de verano)
+ * todavía es "ayer". Eso hacía que los usos iniciados de madrugada guardaran
+ * la fecha anterior y el cronómetro arrancara mostrando ~24 h de más.
+ */
+export function toLocalDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export function todayLocalDate(): string {
+  return toLocalDateString(new Date())
+}
+
+/**
  * Normaliza un string de hora a `HH:mm` (para mostrar en la UI).
  */
 export function formatTime(hora: string | null | undefined): string {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
+import { todayLocalDate } from '../../lib/utils'
 import { MaquinaModalTitle } from '../ui/EtiquetaTag'
 import { IconAlert, IconUser, IconPlay, IconClock } from '../ui/icons'
 import TrabajadorAvatar from '../ui/TrabajadorAvatar'
@@ -19,7 +20,7 @@ const nowTime = () => {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
-const todayDate = () => new Date().toISOString().slice(0, 10)
+const todayDate = todayLocalDate
 
 type Step = 'tecnico' | 'lanzamiento' | 'proceso' | 'confirmar' | 'averia'
 type FlowStep = Exclude<Step, 'averia'>
