@@ -9,10 +9,10 @@ import toast from 'react-hot-toast'
  * Login — pantalla partida (rediseño julio 2026).
  *
  * Izquierda: panel de marca en oscuro FIJO (no sigue al tema, como el taller
- * físico): retícula técnica de fondo, claim y las tres áreas de la planta
- * (fresado / sinterizado / impresión 3D) como fila discreta de iconos.
- * Derecha: formulario limpio sobre tokens del tema. En móvil el panel visual
- * se oculta y queda el formulario con el logo.
+ * físico): vídeo de fresado en bucle bajo un tinte oscuro de legibilidad,
+ * claim y las tres áreas de la planta (fresado / sinterizado / impresión 3D)
+ * como fila discreta de iconos. Derecha: formulario limpio sobre tokens del
+ * tema. En móvil el panel visual se oculta y queda el formulario con el logo.
  */
 
 export default function Login() {
@@ -86,18 +86,6 @@ export default function Login() {
           }}
         />
 
-        {/* Retícula técnica sobre el vídeo — mantiene la firma visual */}
-        <div
-          aria-hidden
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(208,154,64,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(208,154,64,0.06) 1px, transparent 1px)',
-            backgroundSize: '36px 36px',
-            maskImage: 'radial-gradient(ellipse 90% 80% at 30% 20%, black 40%, transparent 100%)',
-            WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at 30% 20%, black 40%, transparent 100%)',
-          }}
-        />
 
         {/* Marca */}
         <div className="relative flex items-center gap-3">
