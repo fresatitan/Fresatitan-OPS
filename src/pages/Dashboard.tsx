@@ -4,14 +4,16 @@ import TopBar from '../components/ui/TopBar'
 import MaquinaWorkCard from '../components/maquinas/MaquinaWorkCard'
 import CompletedWorkCard from '../components/maquinas/CompletedWorkCard'
 import EnVivoPanel from '../components/maquinas/EnVivoPanel'
+import { IconMill, IconSinter, IconPrinter3D } from '../components/ui/icons'
 import { useWorkflowStore } from '../store/workflowStore'
 import { useAlertasRealtime } from '../hooks/useAlertasRealtime'
-import { TIPOS_MAQUINA_PLURAL, SUBTIPOS_FRESADORA } from '../constants/estados'
+import { TIPOS_MAQUINA_PLURAL, SUBTIPOS_FRESADORA, SUBTIPOS_SINTERIZADORA } from '../constants/estados'
 import { toIsoDateTime } from '../lib/utils'
-import type { Maquina, TipoMaquina, SubtipoFresadora } from '../types/database'
+import type { Maquina, TipoMaquina, SubtipoFresadora, SubtipoSinterizadora } from '../types/database'
 
 const FAMILIAS: TipoMaquina[] = ['fresadora', 'sinterizadora', 'impresora_3d']
 const SUBFAMILIAS_FRESADORA: SubtipoFresadora[] = ['metal', 'seco', 'humedo']
+const SUBFAMILIAS_SINTERIZADORA: SubtipoSinterizadora[] = ['cr_co', 'titanio']
 
 export default function Dashboard() {
   useAlertasRealtime()
@@ -71,8 +73,8 @@ export default function Dashboard() {
         }
       />
 
-      <main className="p-4 lg:p-6 space-y-6">
-        {/* KPIs — 3 métricas esenciales (sin subtexto ni adornos) */}
+      <main className="p-4 lg:p-6 space-y-8">
+        {/* KPIs — 3 métricas esenciales */}
         <div className="grid grid-cols-3 gap-3">
           <KpiBox label="Disponibles" value={disponibles} tone="activa" />
           <KpiBox label="En uso" value={enUso} tone="parada" />
@@ -134,20 +136,41 @@ function KpiBox({
   tone: 'activa' | 'parada' | 'averia' | 'neutral'
 }) {
   const toneMap = {
-    activa: { border: 'border-activa/25', color: 'text-activa' },
-    parada: { border: 'border-parada/25', color: 'text-parada' },
-    averia: { border: 'border-averia/30', color: 'text-averia' },
-    neutral: { border: 'border-border-subtle', color: 'text-text-primary' },
+    activa: { dot: 'bg-activa', color: 'text-activa' },
+    parada: { dot: 'bg-parada', color: 'text-parada' },
+    averia: { dot: 'bg-averia', color: 'text-averia' },
+    neutral: { dot: 'bg-border-strong', color: 'text-text-primary' },
   }
   const t = toneMap[tone]
   return (
-    <div className={`bg-surface-2 border ${t.border} rounded-lg px-4 py-3`}>
-      <div className="text-[10px] text-text-tertiary uppercase tracking-widest">{label}</div>
-      <div className={`text-3xl font-mono font-bold tabular-nums mt-1 leading-none ${t.color}`}>
+    <div className="bg-surface-2 border border-border-subtle rounded-lg px-4 py-3">
+      <div className="flex items-center gap-1.5">
+        <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />
+        <span className="text-[10px] text-text-tertiary uppercase tracking-widest">{label}</span>
+      </div>
+      <div className={`text-3xl font-mono font-bold tabular-nums mt-1.5 leading-none ${t.color}`}>
         {value}
       </div>
     </div>
   )
+}
+
+// Icono y acentos por familia
+const FAMILIA_META: Record<TipoMaquina, { Icon: typeof IconMill }> = {
+  fresadora: { Icon: IconMill },
+  sinterizadora: { Icon: IconSinter },
+  impresora_3d: { Icon: IconPrinter3D },
+}
+
+// Acento de raíl por sub-familia (fresadoras mantienen su código de color
+// histórico; sinterizadoras estrenan el suyo)
+const SUBFAMILIA_ACCENT: Record<string, { rail: string; dot: string }> = {
+  metal:   { rail: 'border-l-mantenimiento/40', dot: 'bg-mantenimiento' },
+  seco:    { rail: 'border-l-primary/50',       dot: 'bg-primary' },
+  humedo:  { rail: 'border-l-activa/40',        dot: 'bg-activa' },
+  cr_co:   { rail: 'border-l-mantenimiento/40', dot: 'bg-mantenimiento' },
+  titanio: { rail: 'border-l-activa/40',        dot: 'bg-activa' },
+  none:    { rail: 'border-l-border-default',   dot: 'bg-border-strong' },
 }
 
 function FamilySection({
@@ -159,13 +182,37 @@ function FamilySection({
 }) {
   const label = TIPOS_MAQUINA_PLURAL[familia]
   const count = maquinas.length
+  const { Icon } = FAMILIA_META[familia]
 
-  // Para fresadoras agrupamos también por sub-familia (metal/seco/humedo)
-  const isFresadora = familia === 'fresadora'
+  const libres  = maquinas.filter((m) => m.estado_actual === 'parada').length
+  const enUso   = maquinas.filter((m) => m.estado_actual === 'activa').length
+  const alertas = maquinas.filter(
+    (m) => m.estado_actual === 'avería' || m.estado_actual === 'mantenimiento',
+  ).length
 
   return (
     <section>
-      <SectionTitle text={label} count={count} />
+      {/* Cabecera de familia — banda con icono, título grande y resumen de estado.
+          Es el nivel 1 de la jerarquía: debe verse de un vistazo dónde empieza
+          cada familia al hacer scroll. */}
+      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border-default">
+        <div className="w-9 h-9 rounded-lg bg-primary-muted text-primary-ink flex items-center justify-center shrink-0">
+          <Icon size={20} />
+        </div>
+        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+          <h2 className="text-[18px] font-bold text-text-primary tracking-tight leading-none">
+            {label}
+          </h2>
+          <span className="text-[11.5px] font-mono text-text-tertiary tabular-nums">{count}</span>
+        </div>
+        {count > 0 && (
+          <div className="hidden sm:flex items-center gap-3.5">
+            <MiniStat value={libres} label="libres" dot="bg-activa" />
+            <MiniStat value={enUso} label="en uso" dot="bg-parada" />
+            <MiniStat value={alertas} label="avisos" dot="bg-averia" />
+          </div>
+        )}
+      </div>
 
       {count === 0 ? (
         <div className="bg-surface-2 border border-dashed border-border-subtle rounded-lg px-4 py-6 text-center">
@@ -173,44 +220,45 @@ function FamilySection({
             Sin {label.toLowerCase()} dadas de alta todavía.
           </p>
         </div>
-      ) : isFresadora ? (
-        // Sub-secciones por sub-familia
-        <div className="space-y-5">
-          {SUBFAMILIAS_FRESADORA.map((sub) => {
-            const lista = maquinas
-              .filter((m) => m.subtipo === sub)
-              .sort((a, b) => a.codigo.localeCompare(b.codigo))
-            if (lista.length === 0) return null
-            return (
-              <div key={sub}>
-                <SubFamilyHeader subtipo={sub} count={lista.length} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {lista.map((m) => (
-                    <MaquinaWorkCard key={m.id} maquina={m} />
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-          {/* Fresadoras sin sub-familia asignada (legacy) */}
-          {(() => {
-            const huerfanas = maquinas.filter((m) => !m.subtipo)
-            if (huerfanas.length === 0) return null
-            return (
-              <div>
-                <SubFamilyHeader subtipo={null} count={huerfanas.length} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {huerfanas.map((m) => (
-                    <MaquinaWorkCard key={m.id} maquina={m} />
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
+      ) : familia === 'fresadora' ? (
+        <div className="space-y-6">
+          {SUBFAMILIAS_FRESADORA.map((sub) => (
+            <SubFamilyGroup
+              key={sub}
+              maquinas={maquinas.filter((m) => m.subtipo === sub)}
+              accentKey={sub}
+              short={SUBTIPOS_FRESADORA[sub].short}
+              description={SUBTIPOS_FRESADORA[sub].description}
+            />
+          ))}
+          <SubFamilyGroup
+            maquinas={maquinas.filter((m) => !m.subtipo)}
+            accentKey="none"
+            short="SIN SUB-FAMILIA"
+            description=""
+          />
+        </div>
+      ) : familia === 'sinterizadora' ? (
+        <div className="space-y-6">
+          {SUBFAMILIAS_SINTERIZADORA.map((sub) => (
+            <SubFamilyGroup
+              key={sub}
+              maquinas={maquinas.filter((m) => m.subtipo === sub)}
+              accentKey={sub}
+              short={SUBTIPOS_SINTERIZADORA[sub].short}
+              description={SUBTIPOS_SINTERIZADORA[sub].description}
+            />
+          ))}
+          <SubFamilyGroup
+            maquinas={maquinas.filter((m) => !m.subtipo || (m.subtipo !== 'cr_co' && m.subtipo !== 'titanio'))}
+            accentKey="none"
+            short="SIN SUB-FAMILIA"
+            description=""
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {maquinas
+          {[...maquinas]
             .sort((a, b) => a.codigo.localeCompare(b.codigo))
             .map((m) => (
               <MaquinaWorkCard key={m.id} maquina={m} />
@@ -221,35 +269,53 @@ function FamilySection({
   )
 }
 
-function SubFamilyHeader({
-  subtipo,
-  count,
-}: {
-  subtipo: SubtipoFresadora | null
-  count: number
-}) {
-  const meta = subtipo
-    ? SUBTIPOS_FRESADORA[subtipo]
-    : { label: 'Sin sub-familia', short: 'SIN SUB-FAMILIA', description: '' }
+function MiniStat({ value, label, dot }: { value: number; label: string; dot: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={`w-1.5 h-1.5 rounded-full ${value > 0 ? dot : 'bg-border-strong'}`} />
+      <span className="text-[12px] font-mono tabular-nums text-text-primary">{value}</span>
+      <span className="text-[10.5px] text-text-tertiary">{label}</span>
+    </span>
+  )
+}
 
-  // Color de acento por sub-familia
-  const accent =
-    subtipo === 'metal'  ? 'border-l-mantenimiento'
-    : subtipo === 'seco' ? 'border-l-primary'
-    : subtipo === 'humedo' ? 'border-l-activa'
-    : 'border-l-border-subtle'
+/**
+ * Grupo de sub-familia: cabecera con punto de color + raíl vertical del mismo
+ * acento recorriendo todo el grupo. El raíl hace que al escanear la página se
+ * distinga al instante dónde empieza y acaba cada sub-familia (nivel 2).
+ */
+function SubFamilyGroup({
+  maquinas,
+  accentKey,
+  short,
+  description,
+}: {
+  maquinas: Maquina[]
+  accentKey: string
+  short: string
+  description: string
+}) {
+  if (maquinas.length === 0) return null
+  const accent = SUBFAMILIA_ACCENT[accentKey] ?? SUBFAMILIA_ACCENT.none
+  const lista = [...maquinas].sort((a, b) => a.codigo.localeCompare(b.codigo))
 
   return (
-    <div className="flex items-baseline gap-2 mb-2">
-      <div className={`pl-2 border-l-4 ${accent}`}>
-        <span className="text-[11px] font-mono uppercase tracking-widest text-text-secondary">
-          {meta.short}
+    <div className={`pl-4 border-l-2 ${accent.rail}`}>
+      <div className="flex items-baseline gap-2 mb-2.5">
+        <span className={`w-2 h-2 rounded-full self-center ${accent.dot}`} />
+        <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-text-primary">
+          {short}
         </span>
-        <span className="ml-2 text-[10px] font-mono text-text-tertiary">{count}</span>
+        <span className="text-[10.5px] font-mono text-text-tertiary tabular-nums">{lista.length}</span>
+        {description && (
+          <span className="text-[11px] text-text-tertiary hidden sm:inline">· {description}</span>
+        )}
       </div>
-      {meta.description && (
-        <span className="text-[10px] text-text-tertiary italic hidden sm:inline">· {meta.description}</span>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+        {lista.map((m) => (
+          <MaquinaWorkCard key={m.id} maquina={m} />
+        ))}
+      </div>
     </div>
   )
 }
