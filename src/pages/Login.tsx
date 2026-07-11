@@ -62,13 +62,37 @@ export default function Login() {
         className="hidden lg:flex flex-col justify-between w-[46%] max-w-[640px] p-12 relative overflow-hidden"
         style={{ backgroundColor: '#12100C', color: '#F0EDE6' }}
       >
-        {/* Retícula técnica de fondo */}
+        {/* Vídeo de fondo: fresado dental en bucle. El fondo #12100C del aside
+            hace de poster hasta que carga — sin flashes claros. */}
+        <video
+          aria-hidden
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          src="/login-bg.mp4"
+        />
+
+        {/* Filtro de legibilidad: tinte oscuro cálido + gradiente extra donde
+            vive el texto (izquierda/centro). El vídeo se intuye, no compite. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(105deg, rgba(18,16,12,0.92) 0%, rgba(18,16,12,0.78) 45%, rgba(18,16,12,0.55) 100%)',
+          }}
+        />
+
+        {/* Retícula técnica sobre el vídeo — mantiene la firma visual */}
         <div
           aria-hidden
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(208,154,64,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(208,154,64,0.07) 1px, transparent 1px)',
+              'linear-gradient(rgba(208,154,64,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(208,154,64,0.06) 1px, transparent 1px)',
             backgroundSize: '36px 36px',
             maskImage: 'radial-gradient(ellipse 90% 80% at 30% 20%, black 40%, transparent 100%)',
             WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at 30% 20%, black 40%, transparent 100%)',
