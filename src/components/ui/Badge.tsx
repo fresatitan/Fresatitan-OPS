@@ -1,9 +1,9 @@
 import type { EstadoMaquina } from '../../types/database'
 
-const STATE_STYLES: Record<EstadoMaquina, { dot: string; bg: string; text: string; animate?: string }> = {
+const STATE_STYLES: Record<EstadoMaquina, { dot: string; bg: string; text: string }> = {
   activa: { dot: 'bg-activa', bg: 'bg-activa-muted', text: 'text-activa' },
   parada: { dot: 'bg-parada', bg: 'bg-parada-muted', text: 'text-parada' },
-  'avería': { dot: 'bg-averia', bg: 'bg-averia-muted', text: 'text-averia', animate: 'animate-averia' },
+  'avería': { dot: 'bg-averia dot-breathe', bg: 'bg-averia-muted', text: 'text-averia' },
   mantenimiento: { dot: 'bg-mantenimiento', bg: 'bg-mantenimiento-muted', text: 'text-mantenimiento' },
   inactiva: { dot: 'bg-inactiva', bg: 'bg-inactiva-muted', text: 'text-inactiva' },
 }
@@ -25,7 +25,7 @@ export default function Badge({ estado, size = 'md' }: BadgeProps) {
     <span
       className={`
         inline-flex items-center font-mono font-medium tracking-wider rounded
-        ${style.bg} ${style.text} ${sizeClasses} ${style.animate ?? ''}
+        ${style.bg} ${style.text} ${sizeClasses}
       `}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${style.dot} shrink-0`} />

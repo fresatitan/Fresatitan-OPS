@@ -2,157 +2,120 @@
 
 ## Contexto del proyecto
 
-**FRESATITAN OPS** es una aplicación web para **FRESATITAN, S.L.** — empresa del sector dental especializada en CAD-CAM (fresado, sinterizado e impresión 3D de prótesis dentales). La plataforma controla y monitoriza los procesos del laboratorio dental: estado de las máquinas, registro de trabajos por operario, medición de eficiencia y generación de informes.
+**FRESATITAN OPS** es la plataforma de control de planta de **FRESATITAN, S.L.** — laboratorio dental CAD-CAM (fresado, sinterizado e impresión 3D de prótesis). Controla el estado de las máquinas, el registro de trabajos por operario, averías, mantenimientos e informes. **En producción y en uso real** (julio 2026).
 
-La app tiene **dos experiencias diferenciadas**:
-- **Panel de Planta** (`/panel`): interfaz táctil para tablets en el laboratorio, donde los trabajadores fichan, seleccionan máquina y registran su trabajo con cronómetro en vivo.
-- **Dashboard Admin** (`/`): panel de gestión para el propietario con KPIs, estado de máquinas, gestión de trabajadores y máquinas.
+Tres experiencias:
+- **Panel de Planta** (`/panel`): táctil para tablets del taller. Los operarios eligen máquina por su **etiqueta física** (F 1, Zr 2, SINT 4, TI 1…), registran preparación/producción/mantenimiento con cronómetro y cierran con OK/KO.
+- **Dashboard Admin** (`/`): gestión para Toni y Roser (login Supabase Auth). KPIs, máquinas por familia/sub-familia, trabajadores, alertas, auditoría e informes.
+- **Panel TV** (`/tv`): "panel de aeropuerto" de solo lectura con auto-scroll para el televisor del taller. Paleta oscura FIJA (hex hardcodeados a propósito, no sigue al tema).
+
+**Distribución**: web en Vercel (deploy automático al hacer push a `main`) + dos APKs Android vía Capacitor: operario (`com.fresatitan.ops`, arranca en `/panel`) y TV (`com.fresatitan.ops.tv`, arranca en `/tv`, se genera con `scripts/build-apk-tv.sh <version>`). Versión Android actual: 1.14. Salida en `builds/apk*/NNN/` y `~/Downloads`.
 
 ---
 
 ## Stack tecnológico
 
-- **Frontend**: React 19 + TypeScript + Vite 8
-- **Estilos**: Tailwind CSS v4
-- **Backend / DB**: Supabase (Auth, PostgreSQL, Realtime, Storage)
-- **Estado global**: Zustand
-- **Formularios**: React Hook Form + Zod
+- **Frontend**: React 19 + TypeScript + Vite 8 (rolldown)
+- **Estilos**: Tailwind CSS v4 (tokens en `@theme` de `src/index.css`)
+- **Backend / DB**: Supabase (Auth, PostgreSQL, Realtime, Storage, Edge Functions)
+- **Estado global**: Zustand (`workflowStore`, `trabajadoresStore`, `authStore`, `themeStore`)
 - **Routing**: React Router v7 (`react-router-dom` ^7)
-- **Fechas**: date-fns
-- **Exportación**: xlsx (Excel) / jsPDF (PDF)
-- **Gráficas**: Recharts
-- **Notificaciones**: Supabase Realtime + react-hot-toast
-- **Deploy**: Vercel
+- **Nativo**: Capacitor 8 (Android; StatusBar/SplashScreen)
+- **Exportación**: xlsx (Excel) / jsPDF (PDF) · **Gráficas**: Recharts · **Toasts**: react-hot-toast
+- **Emails de alerta**: Edge Function `notify-alerta` (Resend) → Roser + Toni
+- **Deploy**: Vercel (integración Git; push a `main` = deploy a producción)
 
 ---
 
-## Diseño: Industrial Premium
+## Diseño: clínico-técnico (rediseño julio 2026)
 
-Estética oscura, densa y orientada a datos. Referentes: Grafana, Linear, Vercel Dashboard.
+Dos temas gobernados por tokens CSS (`[data-theme='light']` en `index.css`):
 
-- **Fondo**: `#0A0A0A` / `#0F0F0F` (sistema de superficies surface-0 a surface-4)
-- **Primario**: `#D09A40` (dorado/ocre — acento dominante de marca)
-- **Texto**: `#F0F0F0` (primary), `#888` (secondary), `#555` (tertiary)
-- **Tipografía**: DM Mono para datos/métricas, Inter para UI general
-- **Bordes sutiles**, sin sombras blandas — estética panel de control
-- **Estados de máquina** (colores semánticos saturados sobre oscuro):
-  - Activa: `#22C55E` (verde)
-  - Parada: `#F59E0B` (ámbar)
-  - Avería: `#EF4444` (rojo)
-  - Mantenimiento: `#3B82F6` (azul)
-  - Inactiva: `#6B7280` (gris)
-- **Microanimaciones**: solo en cambios de estado (parpadeo en avería, transición suave al actualizar)
-- **Noise overlay** para profundidad
-- **Scrollbar custom** minimalista
+- **Claro "clínico-técnico"** — por defecto en `/panel`: página hueso cálido `#F6F5F1`, cards blancas, tinta cálida de 3 niveles, estados desaturados. El dorado como tinta usa `--color-primary-ink` (bronce AA `#8A6520` en claro).
+- **Oscuro industrial** — por defecto en el resto: superficies `#0A0A0A`–`#222`.
+
+Reglas del lenguaje visual:
+- **Dorado `#D09A40` como ÚNICO acento** de marca (placas, CTA); no añadir otros acentos que compitan.
+- **Tipografía**: Archivo (grotesk de señalética, UI) + DM Mono (códigos, cronómetros, métricas).
+- **Iconos**: set SVG propio en `src/components/ui/icons.tsx` (trazo 1.7). **Prohibido usar emojis como iconos** (renderizan distinto por dispositivo y delatan la UI como generada).
+- **Cards**: superficie neutra + borde 1px + `shadow-card`; el estado se comunica con **barra lateral de 3px + chip punto-y-texto**, nunca tiñendo toda la card. Sin glows, sin `animate-ping` (solo `dot-breathe` en el punto cuando hay avería).
+- **EtiquetaTag** (`ui/EtiquetaTag.tsx`): placa dorada que replica el cartel físico de cada máquina — es EL identificador del operario, domina sobre código REF y nombre.
+- Botones táctiles: `.btn-touch` + `.btn-touch-primary` / `.btn-touch-danger`; selección con anillo dorado (`ring-1 ring-primary`).
+- Estados de máquina (recalibrados por tema): activa/libre verde · en uso ámbar · avería roja · mantenimiento azul · inactiva gris.
+- **Login**: pantalla partida — panel de marca oscuro fijo con vídeo de fresado en bucle (`public/login-bg.mp4`) bajo tinte gradiente de legibilidad + formulario sobre tokens.
 
 ---
 
-## Roles de usuario
+## Roles y acceso
 
-| Rol | Descripción |
+| Rol | Acceso |
 |---|---|
-| `operario` | Registra inicio/fin de procesos, reporta incidencias en su máquina |
-| `supervisor` | Visión de todas las máquinas, valida registros, gestiona alertas |
-| `tecnico` | Registra intervenciones de mantenimiento, cambia estado de máquinas |
-| `admin` | Acceso total: gestión de usuarios, máquinas, configuración, informes |
+| Operarios | Sin cuenta — usan la tablet (`/panel`); se identifican tocando su avatar en cada acción |
+| `admin` (Toni, Roser) | Login Supabase Auth → Dashboard completo |
 
-Los roles se gestionan con Supabase Auth + tabla `profiles` con campo `role`.
+La tabla `profiles` guarda trabajadores (nombre, rol, `activo`, `puede_operar`). En el panel se eligen por avatar; no hay texto libre.
 
 ---
 
-## Arquitectura: Dos experiencias
+## Máquinas reales (producción)
 
-### Panel de Planta (`/panel`) — Tablet
+El subtipo diferencia catálogos de procesos, averías y mantenimiento.
 
-Interfaz tipo kiosk para la tablet de planta. Sin sidebar, botones grandes, táctil.
+| Etiqueta | Código | Máquina | Tipo · subtipo | Lanzamiento |
+|---|---|---|---|---|
+| F 1-3 | REF-039/040/066 | Fresadoras FANUC 1-3 | fresadora · metal | no |
+| Zr 1-3 | REF-030/057/064 | Fresadoras UP3D/P53 | fresadora · seco | no |
+| Ds 1-2 | REF-042/062 | Biomill / UP3D P42 | fresadora · humedo | no |
+| SINT 1-5 | REF-045…049 | TRUMPF ×3 + SISMA ×2 | sinterizadora · cr_co (N₂) | **sí** |
+| TI 1 | REF-TITANIO | ZONELAB CREATE | sinterizadora · titanio (Ar) | **sí** |
+| Imp 1-2 | REF-063/067 | PROZEN / MIICRAFT | impresora_3d | no |
+| — | REF-041 | CM Lilian | retirada (`activa=false`) | — |
 
-**Flujo del trabajador:**
-1. Se identifica (se recuerda en `localStorage`)
-2. Ve el **panel de planta** con todas las máquinas: disponibles, en uso (quién y qué), avería, inactivas
-3. KPIs rápidos: disponibles, en uso, avería, inactivas
-4. Toca una máquina disponible → elige **Procesos** o **Mantenimiento**
-5. Rellena datos mínimos (tipo, referencia, turno / tipo mant., descripción)
-6. **Cronómetro circular grande** en vivo con datos del trabajo
-7. Finaliza → introduce piezas → card generada para el admin
-8. Vuelve al panel de planta
+- `requiere_lanzamiento` (¿quién pulsa START?) **solo en sinterizadoras** (acuerdo cliente julio 2026).
+- `requiere_preparacion` solo en sinterizadoras: ciclo estricto preparación → producción → cierre.
 
-### Dashboard Admin (`/`) — Desktop
+### Procesos por sub-familia (`PROCESOS_POR_SUBFAMILIA`)
+metal: titanio, cr_co · seco: circonio, pmma, otro · humedo: disilicato, composite · sinterizadora: cr_co_rigido, cr_co_flexible, titanio · impresora_3d: otro. (Valores antiguos —fresado, sinterizado…— se conservan en el enum solo para históricos.)
 
-Panel de gestión con sidebar completa.
+### Averías habituales por sub-familia (`TIPOS_INCIDENCIA_POR_SUBFAMILIA`)
+Lista oficial del cliente (julio 2026). El texto libre al cerrar en KO es **opcional salvo en «Otros»**. La lista de titanio es PROVISIONAL hasta confirmación de Roser.
 
-**Secciones:**
-- **Dashboard** (`/`): KPIs (activas, averías, mantenimiento, procesos activos), grid de máquinas con estado + último trabajador + tiempos, barra de distribución de estados, últimos trabajos completados
-- **Máquinas** (`/maquinas`): grid filtrable por estado, crear/editar máquinas, dropdowns de Procesos/Mantenimiento por máquina, vista Actividad con cards de trabajos completados
-- **Trabajadores** (`/trabajadores`): tabla con nombre, apellidos, rol, estado activo/inactivo, crear/editar/eliminar, filtro por rol, KPIs por rol
-- **Panel Planta** (`/panel`): acceso admin al panel de planta
-- **Alertas** (`/alertas`): pendiente
-- **Informes** (`/informes`): pendiente
+### Mantenimiento por sub-familia (`constants/mantenimiento.ts`)
+Acciones oficiales por catálogo (metal incluye "Cambio de herramienta" 1-21; seco 1-6; húmedo 1-12; Cr-Co con PIAB; titanio con Filtro 1/2/3 sin PIAB) + plantillas de planes de revisión con auto-vinculación por nombre.
 
 ---
 
-## Módulos implementados
+## Flujos clave
 
-### 1. Control de estado de máquinas
-- Estados: `activa`, `parada`, `avería`, `mantenimiento`, `inactiva`
-- Cambio automático de estado al iniciar/finalizar procesos o mantenimiento
-- Cards con estado actual, último proceso, trabajador, tiempos inicio/fin
-- Badge de estado con colores semánticos y animación de parpadeo en avería
-
-### 2. Registro de procesos / producción
-- Tipos: `fresado`, `torneado`, `rectificado`, `taladrado`, `otro`
-- Campos: referencia pieza, cantidad, turno (mañana/tarde/noche), observaciones
-- Cronómetro en vivo durante el proceso
-- Al finalizar: registro de duración y piezas completadas
-- Card de trabajo completado con todos los detalles
-
-### 3. Registro de mantenimiento
-- Tipos: `preventivo`, `correctivo`, `predictivo`
-- Campos: descripción del trabajo
-- Cronómetro en vivo durante la intervención
-- Card de mantenimiento completado con técnico, tipo, duración
-
-### 4. Gestión de trabajadores
-- Alta/edición/eliminación de trabajadores
-- Roles: operario, técnico, supervisor, admin
-- Toggle activo/inactivo
-- Selector de trabajadores en modales (no texto libre)
-- Resolución de nombres en todas las cards y barras de trabajo activo
-
-### 5. Gestión de máquinas
-- Alta/edición de máquinas (código, nombre, ubicación, descripción)
-- Cada máquina tiene dropdown de Procesos y Mantenimiento
-
-### 6. Panel de Planta (Tablet)
-- Selección de trabajador con memoria localStorage
-- Vista de planta con todas las máquinas y su estado
-- Muestra quién está en cada máquina en uso
-- Flujo completo: selección → tipo trabajo → datos → cronómetro → finalizar
+1. **Uso (producción)**: tocar máquina libre → ¿quién? → (¿quién lanza? solo sinterizadoras) → proceso → confirmar → cronómetro → cerrar: ¿quién cierra? → OK / KO → si KO: tipo de avería (desplegable oficial) + texto (opcional salvo «Otros»). Un cierre KO **crea automáticamente una avería pendiente de revisar** (leve propuesta) + email a admins.
+2. **Averías**: el operario **propone** severidad (crítica/leve) — reportar NUNCA bloquea la máquina; el **admin decide** en `/alertas` (confirmar crítica = bloquear). Resolución con seguimiento cronológico (`averia_pasos`) y documentos (`averia_documentos`, Storage).
+3. **Preparación**: obligatoria en sinterizadoras tras cada cierre; badge "Lista para producir / Necesita preparación".
+4. **Mantenimiento**: checklist de acciones del catálogo por sub-familia + einas numeradas; puede vincularse a un plan de revisión (resetea su contador vía trigger).
 
 ---
 
-## Estructura de base de datos
+## Estructura de base de datos (tablas reales)
 
-```sql
--- Perfiles de usuario
-profiles (id, user_id, nombre, apellidos, role, activo, created_at)
-
--- Máquinas
-maquinas (id, codigo, nombre, descripcion, ubicacion, estado_actual, created_at)
-
--- Historial de estados de máquinas
-maquina_estados (id, maquina_id, estado, motivo, usuario_id, timestamp)
-
--- Procesos de producción
-procesos (id, maquina_id, operario_id, tipo_proceso, referencia_pieza, cantidad, turno, inicio, fin, duracion, observaciones, estado)
-
--- Alertas
-alertas (id, maquina_id, tipo, mensaje, leida, destinatario_role, created_at)
-
--- Intervenciones de mantenimiento
-mantenimientos (id, maquina_id, tecnico_id, tipo, descripcion, inicio, fin, duracion, created_at)
+```
+profiles              — trabajadores + rol + activo + puede_operar
+maquinas              — codigo, etiqueta, nombre, tipo, subtipo, numero_serie,
+                        estado_actual, requiere_preparacion, requiere_lanzamiento, activa
+usos_equipo           — fecha, hora_preparacion/acabado, tecnico_preparacion/lanzamiento/acabado,
+                        tipo_proceso, resultado (pendiente/ok/ko), observaciones
+incidencias           — uso_id, tipo (categoría oficial), descripcion
+maquina_estados       — historial de estados; en averías: severidad, severidad_confirmada_por_admin,
+                        cerrada_en/por, resolucion, tecnico/fecha_intervencion
+mantenimientos        — maquina, tecnico, tipo, descripcion (acciones serializadas), plan_id
+mantenimiento_planes  — planes de revisión (cada N días/semanas/meses/usos)
+preparaciones         — fecha, hora, trabajador, observaciones
+alertas               — notificaciones internas
+averia_documentos     — adjuntos de averías (Storage)
+averia_pasos          — seguimiento cronológico de una avería
 ```
 
-Row Level Security (RLS) activado en todas las tablas. Políticas por rol.
+RLS activado; el panel usa la anon key con políticas públicas específicas; las operaciones sensibles van por RPCs SECURITY DEFINER (`report_maquina_averia`, `confirmar_severidad_averia`, …).
+
+**Migraciones** (`supabase/migrations/`, 0001-0027): se aplican **a mano en el SQL Editor** del proyecto (`jcvandpyyrhbklmbysjw`) — el proyecto Supabase NO está en la cuenta CLI. Los enums nuevos y su backfill van en ejecuciones separadas (limitación de Postgres).
 
 ---
 
@@ -161,65 +124,37 @@ Row Level Security (RLS) activado en todas las tablas. Políticas por rol.
 ```
 src/
 ├── components/
-│   ├── ui/              # Badge, Layout, Modal, Sidebar, MobileNav, TopBar, StatCard
-│   ├── maquinas/        # MaquinaWorkCard, MaquinaFormModal, CompletedWorkCard, StartProcesoModal, StartMantenimientoModal
-│   └── panel/           # PanelActiveWork, PanelStartWork
-├── pages/
-│   ├── Dashboard.tsx    # KPIs + grid máquinas + últimos trabajos
-│   ├── Maquinas.tsx     # Grid filtrable + crear/editar + actividad
-│   ├── Trabajadores.tsx # Tabla + CRUD + filtros por rol
-│   └── Panel.tsx        # Panel de planta para tablets
-├── hooks/
-│   └── useElapsedTime.ts # Cronómetro en vivo + formatDuration
-├── lib/
-│   ├── supabase.ts      # Cliente Supabase tipado
-│   └── utils.ts
-├── store/
-│   ├── workflowStore.ts      # Máquinas, procesos, mantenimientos
-│   └── trabajadoresStore.ts  # Trabajadores CRUD
-├── types/
-│   └── database.ts      # Tipos TS: Maquina, Proceso, Mantenimiento, etc.
-└── constants/
-    └── estados.ts       # Mapas de estados, roles, turnos
+│   ├── ui/          # icons.tsx, EtiquetaTag, Modal, Sidebar, TopBar, Badge, ThemeToggle, TrabajadorAvatar…
+│   ├── maquinas/    # MaquinaWorkCard, NuevoUso/CerrarUso, mantenimientos, averías (historial/resolver/documentos)
+│   └── panel/       # SeleccionTipoTrabajo, StartMantenimiento, StartPreparacion
+├── pages/           # Panel, Dashboard, Maquinas, Trabajadores, Alertas, Auditoria, Informes, Login, TvPanel
+├── hooks/           # useElapsedTime, useAlertasRealtime, useNotifications
+├── lib/             # supabase, utils (todayLocalDate/toLocalDateString/toIsoDateTime), capacitor, pdfExport, averiaDocumentos
+├── store/           # workflowStore, trabajadoresStore, authStore, themeStore
+├── types/database.ts
+└── constants/       # estados.ts (catálogos), mantenimiento.ts (acciones + plantillas)
+scripts/build-apk-tv.sh · android/ (Capacitor) · builds/ (APKs, gitignored)
 ```
 
 ---
 
 ## Convenciones de código
 
-- Componentes: PascalCase, un componente por archivo
-- Hooks: `use` prefix, camelCase
-- Tipos: sufijo `Type` o `Interface` solo si hay ambigüedad; preferir tipos explícitos
-- Siempre tipar los retornos de funciones async que llamen a Supabase
-- No usar `any`; si es necesario, justificarlo con comentario
-- Mensajes de error y UI siempre en **español**
-- Variables y funciones internas en inglés; labels y textos UI en español
-- Zustand: seleccionar datos primitivos o arrays estables, nunca funciones que retornen nuevos objetos (causa bucles infinitos)
-
----
-
-## Comportamiento esperado de Claude Code
-
-- Generar **código completo y funcional**, nunca fragmentos sin contexto
-- Aplicar **RLS policies** siempre que se creen tablas nuevas
-- Usar **tipos TypeScript estrictos** derivados del schema de Supabase
-- Si hay lógica de negocio compleja (ej. cálculo OEE, solapamiento de procesos), encapsularla en hooks o utils testeables
-- Mantener la estética **Industrial Premium** oscura con el dorado `#D09A40` como acento
-- No usar otros colores de acento que compitan con el dorado corporativo
-- Responsive: la app debe funcionar en tablet (operarios en planta usan tablets)
-- Priorizar **Supabase Realtime** para actualizaciones de estado de máquinas en lugar de polling
-- El Panel (`/panel`) debe ser **touch-first**: botones grandes, mínima fricción, sin sidebar
-
----
+- Componentes PascalCase; hooks con prefijo `use`; sin `any`.
+- UI siempre en **español**; variables/funciones internas en inglés.
+- **Fechas: NUNCA `new Date().toISOString().slice(0,10)`** (es UTC; de madrugada es "ayer") → usar `todayLocalDate()` / `toLocalDateString()` de `lib/utils`.
+- Zustand: seleccionar primitivos/arrays estables, nunca selectores que creen objetos nuevos.
+- Realtime para estados de máquina (no polling); optimistic updates con rollback en el store.
+- Los ids de catálogos (acciones, tipos) son estables e independientes del idioma de la UI.
+- Manejo de errores en toda llamada a Supabase; RLS en tablas nuevas.
 
 ## Lo que NO hacer
 
-- No usar librerías de componentes pesadas (MUI, Ant Design) — solo Tailwind + componentes propios
-- No hardcodear IDs ni credenciales
-- No omitir manejo de errores en llamadas a Supabase
-- No crear lógica de negocio directamente en componentes; extraer a hooks
-- No inventar campos de base de datos que no estén en este documento sin consultarlo primero
-- No usar selectores de Zustand que retornen nuevos objetos/arrays (usar datos estables para evitar re-renders infinitos)
+- No usar librerías de componentes (MUI, Ant) — Tailwind + componentes propios.
+- No usar emojis como iconos ni `animate-ping`/glows (ver sección Diseño).
+- No hardcodear IDs ni credenciales (`.env`; service role sin prefijo VITE_).
+- No inventar campos de BD que no estén en las migraciones sin consultar.
+- No tocar el TvPanel para que siga al tema: su paleta oscura fija es deliberada.
 
 ---
 
@@ -228,58 +163,33 @@ src/
 ```env
 VITE_SUPABASE_URL=           # URL del proyecto Supabase
 VITE_SUPABASE_ANON_KEY=      # Anon key (frontend, con RLS)
-SUPABASE_SERVICE_ROLE_KEY=   # Solo scripts admin, NUNCA en frontend (sin prefijo VITE_)
+SUPABASE_SERVICE_ROLE_KEY=   # Solo scripts admin, NUNCA en frontend
 ```
 
----
+Sin variables (o vaciándolas: `VITE_SUPABASE_URL= npm run dev`), la app entra en **modo demo**: datos seed en memoria y login de desarrollo (botones Toni/Roser) — útil para probar sin tocar producción.
 
-## Skills globales instaladas
+## Skills
 
-**Dedicada de mundo:** `fresatitan-feature` — `.claude/skills/fresatitan-feature/`.
-
-Disponibles en `~/.claude/skills/`:
-- `frontend-design` — diseño UI production-grade
-- `senior-frontend` — patrones React, Next.js, optimización
-- `react-best-practices` — 40+ reglas de rendimiento React
-- `senior-backend` — API design, seguridad, DB optimization
-- `senior-architect` — arquitectura, system design, decisiones técnicas
-- `code-reviewer` — code review, security scanning, checklist
-- `skill-creator` — crear/mejorar skills + evals
+**Dedicada de mundo:** `fresatitan-feature` — `.claude/skills/fresatitan-feature/`. Globales en `~/.claude/skills/` (frontend-design, senior-frontend, react-best-practices, senior-backend, senior-architect, code-reviewer, skill-creator).
 
 ---
 
 ## Cliente
 
-**FRESATITAN, S.L.** — empresa del sector dental especializada en CAD-CAM (Computer-Aided Design / Computer-Aided Manufacturing). Servicios: fresado dental (zirconio, PMMA, disilicato, CoCr, titanio), sinterizado (SLM láser), sinterofresado (remecanizado), impresión 3D (modelos, guías quirúrgicas), férulas de descarga, sistema Blender (sobredentadura zirconio + estructura metálica), y otros materiales (PEEK, feldespática, composites, grafeno).
+**FRESATITAN, S.L.** — laboratorio dental CAD-CAM: fresado (zirconio, PMMA, disilicato, CoCr, titanio), sinterizado SLM (Cr-Co con N₂, titanio con Ar), impresión 3D, férulas, Blender. Uso interno; los operarios no son técnicos → mínima fricción. Contactos admin: **Toni y Roser** (reciben los emails de alerta).
 
-El sistema es de uso interno. Los operarios no son usuarios técnicos, por lo que la UI debe ser clara, directa y con el mínimo de fricción posible.
-La app se llama **FRESATITAN OPS**.
-
-### Máquinas del laboratorio (demo, pendiente de datos reales del cliente)
-
-| Código | Tipo |
-|---|---|
-| FRS-01/02/03 | Fresadoras dentales (5 y 4 ejes) |
-| SIN-01 | Sinterizadora láser (SLM) |
-| SIN-02 | Horno de sinterizado |
-| IMP-01/02 | Impresoras 3D dentales |
-| ESC-01 | Escáner de laboratorio |
-
-### Tipos de proceso
-
-`fresado` · `sinterizado` · `sinterofresado` · `impresion3d` · `ferulas` · `blender` · `otro`
+### Pendiente de Roser (julio 2026)
+- Lista definitiva de fallos de la sinterizadora de titanio (hay provisional del PDF).
+- Feedback del rediseño; decidir si las sub-causas de avería de sinterizadoras se muestran aplanadas (actual) o anidadas (literal PDF).
 
 ---
 
 ## Mundo del universo «Alex 1.0»
 
-Este proyecto es un **mundo** del universo (motor en `../Alex 1.0/CLAUDE.md`).
+Este proyecto es un **mundo** del universo (motor en `../CLAUDE.md`).
 
 ### Cadencia — Fase 2 (revisión previa)
-Producto de cliente en operación. Implementar features y fixes con autonomía, pero
-**revisar antes de cualquier deploy a producción** (Vercel) o cambio en Supabase.
+Producto de cliente **en producción**. Implementar features y fixes con autonomía, pero **pedir confirmación explícita antes de cualquier push a `main`** (= deploy automático a Vercel) **o cambio en Supabase** (migraciones las ejecuta Alex en el SQL Editor).
 
 ### Git
-Repo `fresatitan/Fresatitan-OPS`. El git **global** es personal/**Sekees**, así que en
-este repo hay que fijar la identidad **por repo** a la cuenta `fresatitan`
-(`git config user.email …`).
+Repo `fresatitan/Fresatitan-OPS`. Identidad **por repo** en la cuenta `fresatitan` (el git global es personal/Sekees). Antes de push, `gh auth switch --user fresatitan` si hiciera falta.

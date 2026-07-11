@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Badge from '../ui/Badge'
 import EtiquetaTag from '../ui/EtiquetaTag'
+import { IconBroom, IconCheck } from '../ui/icons'
 import { useWorkflowStore } from '../../store/workflowStore'
 import { useTrabajadoresStore } from '../../store/trabajadoresStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
@@ -55,26 +56,28 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit, onPlanes
   return (
     <>
       <div
-        className={`
-          bg-surface-2 rounded-lg border transition-all duration-200 relative
-          h-full flex flex-col
-          ${maquina.estado_actual === 'avería' ? 'border-averia/30 animate-averia' : ''}
-          ${maquina.estado_actual === 'activa' ? 'border-activa/20' : ''}
-          ${maquina.estado_actual === 'mantenimiento' ? 'border-mantenimiento/20' : ''}
-          ${!isBusy && maquina.estado_actual !== 'avería' ? 'border-border-subtle hover:border-border-default' : ''}
-        `}
+        className="bg-surface-2 rounded-lg border border-border-subtle shadow-card hover:shadow-card-hover hover:border-border-default transition-all duration-200 relative h-full flex flex-col overflow-hidden"
       >
+        {/* Barra lateral de estado */}
+        <span
+          className={`absolute left-0 top-0 bottom-0 w-[3px] ${
+            maquina.estado_actual === 'avería' || pendingAveria
+              ? 'bg-averia'
+              : maquina.estado_actual === 'activa'
+              ? 'bg-activa'
+              : maquina.estado_actual === 'mantenimiento'
+              ? 'bg-mantenimiento'
+              : 'bg-border-strong'
+          }`}
+        />
         {/* Banner de aviso no bloqueante (pendiente revisión o leve confirmada) */}
         {pendingAveria && (
-          <div className="px-4 py-1.5 bg-averia text-white flex items-center gap-2 border-b border-averia/40">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
-            </span>
-            <span className="text-[10px] font-mono font-bold tracking-wider uppercase">
+          <div className="px-4 py-1.5 bg-averia-muted flex items-center gap-2 border-b border-border-subtle">
+            <span className="w-1.5 h-1.5 rounded-full bg-averia dot-breathe shrink-0" />
+            <span className="text-[10.5px] font-semibold tracking-wide uppercase text-averia">
               {pendingAveria.severidad_confirmada_por_admin && pendingAveria.severidad === 'leve'
-                ? '⚠ Avería leve activa'
-                : '⏳ Avería pendiente de revisar'}
+                ? 'Avería leve activa'
+                : 'Avería pendiente de revisar'}
             </span>
           </div>
         )}
@@ -85,7 +88,7 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit, onPlanes
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 mb-0.5">
                 <EtiquetaTag etiqueta={maquina.etiqueta} size="sm" />
-                <span className="font-mono text-[11px] text-primary font-bold">{maquina.codigo}</span>
+                <span className="font-mono text-[11px] text-primary-ink font-bold">{maquina.codigo}</span>
                 <span className="text-[10px] font-mono uppercase tracking-wider text-text-tertiary">
                   {maquina.tipo === 'impresora_3d' ? 'Impresora 3D' : maquina.tipo}
                 </span>
@@ -103,9 +106,9 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit, onPlanes
             libres Y con requiere_preparacion=true (las que no lo requieren no muestran nada) */}
         {!isBusy && maquina.estado_actual === 'parada' && maquina.requiere_preparacion && (
           preparacionVigente ? (
-            <div className="px-4 py-1.5 bg-activa/10 border-b border-activa/20 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase text-activa">
-                <span>✓</span>
+            <div className="px-4 py-1.5 bg-activa-muted border-b border-border-subtle flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-[10.5px] font-semibold tracking-wide uppercase text-activa">
+                <IconCheck size={11} />
                 <span>Lista para producir</span>
               </span>
               <span className="text-[10px] font-mono text-activa/80">
@@ -113,9 +116,9 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit, onPlanes
               </span>
             </div>
           ) : (
-            <div className="px-4 py-1.5 bg-parada/10 border-b border-parada/30 flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase text-parada">
-                <span>🧹</span>
+            <div className="px-4 py-1.5 bg-parada-muted border-b border-border-subtle flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-[10.5px] font-semibold tracking-wide uppercase text-parada">
+                <IconBroom size={11} />
                 <span>Necesita preparación</span>
               </span>
             </div>
@@ -169,14 +172,14 @@ export default function MaquinaWorkCard({ maquina, onHistorial, onEdit, onPlanes
             <button
               onClick={() => setShowNuevo(true)}
               disabled={!canOperate}
-              className="flex-1 px-3 py-2.5 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-3 py-2.5 rounded-md text-xs font-bold border border-primary/45 text-primary-ink hover:bg-primary hover:border-primary hover:text-[#1F1608] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               Nuevo uso
             </button>
           ) : (
             <button
               onClick={() => setShowCerrar(true)}
-              className="flex-1 px-3 py-2.5 rounded text-xs font-semibold bg-activa text-white hover:opacity-90 transition-colors"
+              className="flex-1 px-3 py-2.5 rounded-md text-xs font-bold border border-activa/50 text-activa hover:bg-activa hover:border-activa hover:text-white transition-colors"
             >
               Cerrar uso
             </button>
@@ -264,7 +267,7 @@ function ActiveUsoBar({
     <div className="px-4 py-2.5 bg-activa/5 border-b border-activa/10">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-activa animate-pulse shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-activa dot-breathe shrink-0" />
           <span className="text-[11px] text-activa font-medium">EN USO</span>
         </div>
         <span className="font-mono text-xs text-activa tabular-nums shrink-0">{elapsed}</span>

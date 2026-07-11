@@ -345,7 +345,7 @@ function RevisionesVencidasSection() {
                   : estado.plan.unidad === 'semanas' ? 'semanas'
                   : 'meses'}
               </p>
-              <p className="text-xs text-averia">⚠ {sobrepaso}</p>
+              <p className="text-xs font-medium text-averia">{sobrepaso}</p>
               {estado.plan.descripcion && (
                 <p className="text-[11px] text-text-tertiary mt-2 italic">{estado.plan.descripcion}</p>
               )}
@@ -451,7 +451,7 @@ function AveriaCard({
         <div className="mb-3">
           <div className={`text-[10px] ${style.text} uppercase tracking-wider mb-1`}>Motivo</div>
           <p className={`text-xs text-text-primary bg-averia-muted/20 border ${style.border} rounded px-3 py-2 leading-relaxed`}>
-            ⚠ {evento.motivo}
+            {evento.motivo}
           </p>
         </div>
       )}
@@ -558,7 +558,7 @@ function VariantBadge({ variant, severidad }: { variant: AveriaVariant; severida
   if (variant === 'critica') {
     return (
       <span className="text-[10px] font-mono uppercase tracking-widest text-averia bg-averia/15 px-2 py-0.5 rounded">
-        🔴 Crítica
+        Crítica
       </span>
     )
   }
@@ -619,7 +619,7 @@ function UsoProblemaCard({
                   key={i.id}
                   className="text-[11px] text-text-secondary bg-averia-muted/20 border border-averia/15 rounded px-2.5 py-1.5 flex items-start gap-2"
                 >
-                  <span className="text-averia mt-0.5">⚠</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-averia mt-1.5 shrink-0" />
                   <span className="flex-1">{i.descripcion}</span>
                 </li>
               ))}

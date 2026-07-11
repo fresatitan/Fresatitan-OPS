@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import Layout from '../components/ui/Layout'
+import EtiquetaTag from '../components/ui/EtiquetaTag'
 import TopBar from '../components/ui/TopBar'
 import HistorialAveriasModal from '../components/maquinas/HistorialAveriasModal'
 import { useWorkflowStore } from '../store/workflowStore'
@@ -219,10 +220,13 @@ function StatBlock({
   tone?: 'averia' | 'parada'
 }) {
   const colorClass = tone === 'averia' ? 'text-averia' : tone === 'parada' ? 'text-parada' : 'text-text-primary'
-  const borderClass = tone === 'averia' ? 'border-averia/20' : tone === 'parada' ? 'border-parada/20' : 'border-border-subtle'
+  const dotClass = tone === 'averia' ? 'bg-averia' : tone === 'parada' ? 'bg-parada' : 'bg-border-strong'
   return (
-    <div className={`bg-surface-2 border ${borderClass} rounded-lg px-3 py-2.5`}>
-      <div className="text-[10px] text-text-tertiary uppercase tracking-wider">{label}</div>
+    <div className="bg-surface-2 border border-border-subtle rounded-lg px-3 py-2.5">
+      <div className="flex items-center gap-1.5">
+        <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+        <span className="text-[10px] text-text-tertiary uppercase tracking-wider">{label}</span>
+      </div>
       <div className={`text-2xl font-mono font-bold tabular-nums mt-0.5 ${colorClass}`}>
         {value}
       </div>
@@ -292,7 +296,8 @@ function MaquinaAuditoriaCard({
       <div className="px-4 py-3 border-b border-border-subtle">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-xs text-primary font-bold shrink-0">{maquina.codigo}</span>
+            <EtiquetaTag etiqueta={maquina.etiqueta} size="sm" />
+            <span className="font-mono text-[11px] text-primary-ink font-bold shrink-0">{maquina.codigo}</span>
             <span className="text-sm text-text-primary font-medium truncate">{maquina.nombre}</span>
           </div>
           {abiertas > 0 ? (
@@ -318,7 +323,7 @@ function MaquinaAuditoriaCard({
       <div className="px-4 py-3 flex gap-2">
         <button
           onClick={onHistorial}
-          className="flex-1 px-3 py-2 rounded text-xs font-semibold bg-primary text-text-inverse hover:bg-primary-light transition-colors flex items-center justify-center gap-1.5"
+          className="flex-1 px-3 py-2 rounded-md text-xs font-bold border border-primary/45 text-primary-ink hover:bg-primary hover:border-primary hover:text-[#1F1608] transition-colors flex items-center justify-center gap-1.5"
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="8" cy="8" r="6.5" />
