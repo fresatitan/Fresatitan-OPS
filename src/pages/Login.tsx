@@ -2,30 +2,18 @@ import { useState } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import TrabajadorAvatar from '../components/ui/TrabajadorAvatar'
+import { IconMill, IconSinter, IconPrinter3D } from '../components/ui/icons'
 import toast from 'react-hot-toast'
 
 /**
  * Login — pantalla partida (rediseño julio 2026).
  *
  * Izquierda: panel de marca en oscuro FIJO (no sigue al tema, como el taller
- * físico): retícula técnica de fondo, claim y un muro con las placas de
- * etiqueta de las máquinas reales (F 1, SINT 4, TI 1…) — el motivo más
- * reconocible de la app. Derecha: formulario limpio sobre tokens del tema.
- * En móvil el panel visual se oculta y queda el formulario con el logo.
+ * físico): retícula técnica de fondo, claim y las tres áreas de la planta
+ * (fresado / sinterizado / impresión 3D) como fila discreta de iconos.
+ * Derecha: formulario limpio sobre tokens del tema. En móvil el panel visual
+ * se oculta y queda el formulario con el logo.
  */
-
-// Placas decorativas: las etiquetas reales de planta, con rotaciones sutiles
-const PLACAS: { texto: string; rot: string; delay: number }[] = [
-  { texto: 'F 1',    rot: '-3deg',   delay: 0 },
-  { texto: 'F 2',    rot: '2deg',    delay: 40 },
-  { texto: 'Zr 1',   rot: '-1.5deg', delay: 80 },
-  { texto: 'Zr 2',   rot: '2.5deg',  delay: 120 },
-  { texto: 'Ds 1',   rot: '-2deg',   delay: 160 },
-  { texto: 'SINT 1', rot: '1.5deg',  delay: 200 },
-  { texto: 'SINT 4', rot: '-2.5deg', delay: 240 },
-  { texto: 'TI 1',   rot: '3deg',    delay: 280 },
-  { texto: 'Imp 2',  rot: '-1deg',   delay: 320 },
-]
 
 export default function Login() {
   const navigate = useNavigate()
@@ -111,22 +99,17 @@ export default function Login() {
             Fresado, sinterizado e impresión 3D bajo un mismo panel.
           </p>
 
-          {/* Muro de placas — las etiquetas físicas del taller */}
-          <div className="flex flex-wrap gap-2.5 mt-8 max-w-[420px]">
-            {PLACAS.map((p) => (
-              <span
-                key={p.texto}
-                className="inline-flex items-center justify-center min-w-[58px] px-3 py-1.5 rounded-md font-mono font-medium text-[16px] leading-none animate-slide-in"
-                style={{
-                  backgroundColor: '#D09A40',
-                  color: '#2A1F0C',
-                  boxShadow: 'inset 0 0 0 1px rgba(42,31,12,0.25), 0 2px 6px rgba(0,0,0,0.35)',
-                  transform: `rotate(${p.rot})`,
-                  animationDelay: `${p.delay}ms`,
-                }}
-              >
-                {p.texto}
-              </span>
+          {/* Las tres áreas de la planta — discreto, sin protagonismo */}
+          <div className="flex items-center gap-7 mt-9">
+            {([
+              { Icon: IconMill, label: 'Fresado' },
+              { Icon: IconSinter, label: 'Sinterizado' },
+              { Icon: IconPrinter3D, label: 'Impresión 3D' },
+            ] as const).map(({ Icon, label }) => (
+              <div key={label} className="flex items-center gap-2" style={{ color: '#8F877A' }}>
+                <Icon size={17} style={{ color: '#D09A40', opacity: 0.75 }} />
+                <span className="text-[12px]">{label}</span>
+              </div>
             ))}
           </div>
         </div>
@@ -135,9 +118,7 @@ export default function Login() {
         <div className="relative flex items-center gap-2 text-[11px]" style={{ color: '#6E6659' }}>
           <span>FRESATITAN, S.L.</span>
           <span aria-hidden>·</span>
-          <span>Laboratorio dental</span>
-          <span aria-hidden>·</span>
-          <span>Fresado · Sinterizado · Impresión 3D</span>
+          <span>Laboratorio dental CAD-CAM</span>
         </div>
       </aside>
 
